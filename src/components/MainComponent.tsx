@@ -129,10 +129,10 @@ function MainComponent() {
       if (contentType === CONTENT_TYPES.ANIME) {
         const [trendingResponse, popularResponse] = await Promise.all([
           fetch(
-            `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}&with_genres=16`
+            `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=popularity.desc&page=1`
           ),
           fetch(
-            `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=popularity.desc`
+            `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=popularity.desc&page=2`
           ),
         ]);
 
@@ -146,7 +146,6 @@ function MainComponent() {
         setTrendingAnime(formatContentData(trendingData.results, "tv"));
         setPopularAnime(formatContentData(popularData.results, "tv"));
         
-        // Set has more based on API response
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.MOVIE) {
         const [trendingResponse, popularResponse] = await Promise.all([
@@ -172,10 +171,10 @@ function MainComponent() {
       } else if (contentType === CONTENT_TYPES.TV) {
         const [trendingResponse, popularResponse] = await Promise.all([
           fetch(
-            `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}`
+            `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}&without_genres=16`
           ),
           fetch(
-            `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}`
+            `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16`
           ),
         ]);
 
@@ -279,7 +278,6 @@ function MainComponent() {
         `${TMDB_API_BASE}/movie/${id}?api_key=${TMDB_API_KEY}&language=en-US`
       );
       if (!response.ok) throw new Error("Failed to fetch movie details");
-      // For movies, we don't need to set seasons and episodes
       setSeasons([]);
       setEpisodes([]);
     } catch (error) {
