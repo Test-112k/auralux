@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { TMDB_API_KEY, TMDB_API_BASE } from "../lib/constants";
 
 interface RelatedTitlesProps {
@@ -9,10 +9,13 @@ interface RelatedTitlesProps {
 }
 
 const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesProps) => {
-  const [relatedContent, setRelatedContent] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(true);
+  const [relatedContent, setRelatedContent] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchRelatedContent = async () => {
       if (!contentId) return;
       
@@ -43,6 +46,8 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
         }));
         
         setRelatedContent(formattedData);
+        setHasMore(data.page < data.total_pages);
+        setPage(1);
       } catch (error) {
         console.error("Error fetching related content:", error);
       } finally {
@@ -52,6 +57,46 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
     
     fetchRelatedContent();
   }, [contentId, mediaType]);
+
+  const loadMoreRelated = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      const endpoint = `${TMDB_API_BASE}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}&language=en-US&page=${nextPage}`;
+      const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch more related content");
+      }
+      
+      const data = await response.json();
+      
+      const formattedData = data.results.map((item: any) => ({
+        id: item.id,
+        title: mediaType === "movie" ? item.title : item.name,
+        overview: item.overview,
+        poster_path: item.poster_path
+          ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+          : null,
+        score: item.vote_average,
+        year: mediaType === "movie"
+          ? (item.release_date?.split("-")[0] || "N/A")
+          : (item.first_air_date?.split("-")[0] || "N/A"),
+        status: item.status,
+        media_type: mediaType
+      }));
+      
+      setRelatedContent(prev => [...prev, ...formattedData]);
+      setPage(nextPage);
+      setHasMore(data.page < data.total_pages && data.results.length > 0);
+    } catch (error) {
+      console.error("Error loading more related content:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -76,7 +121,7 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
         Related Titles
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {relatedContent.slice(0, 12).map((item) => (
+        {relatedContent.map((item) => (
           <div
             key={`related-${item.id}`}
             className="group cursor-pointer"
@@ -98,7 +143,7 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
                 <div>
                   <h3 className="text-sm font-medium line-clamp-2">
-                    {item.title}
+                    {item.title || "N/A"}
                   </h3>
                   <div className="text-xs text-gray-400 mt-1">
                     {item.year || "N/A"}
@@ -109,6 +154,25 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
           </div>
         ))}
       </div>
+      
+      {hasMore && (
+        <div className="flex justify-center mt-6">
+          <button 
+            onClick={loadMoreRelated}
+            className="bg-[#232323] hover:bg-[#2a2a2a] text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            disabled={loadingMore}
+          >
+            {loadingMore ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                <span>Loading...</span>
+              </>
+            ) : (
+              <span>Load More</span>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

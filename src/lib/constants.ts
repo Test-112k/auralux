@@ -16,6 +16,12 @@ export const STREAMING_SERVERS = {
     movieUrl: (id: string) => `https://vidapi.cyou/imdb.php?id=${id}&hl=hi`,
     tvUrl: (id: string, season: number, episode: number) => 
       `https://vidapi.cyou/tv.php?id=${id}&s=${season}&e=${episode}&hl=hi`
+  },
+  streamable: {
+    name: "Streamable",
+    movieUrl: (id: string) => `https://embedsito.com/e/?tmdb=${id}`,
+    tvUrl: (id: string, season: number, episode: number) => 
+      `https://embedsito.com/e/?tmdb=${id}&s=${season}&e=${episode}`
   }
 };
 
@@ -29,15 +35,15 @@ export const CONTENT_TYPES = {
 
 // Available Regions
 export const REGIONS = [
-  { code: "IN", name: "India", language: "hi" },
-  { code: "JP", name: "Japan", language: "ja" },
-  { code: "KR", name: "Korea", language: "ko" },
-  { code: "CN", name: "China", language: "zh" },
-  { code: "TH", name: "Thailand", language: "th" },
-  { code: "FR", name: "France", language: "fr" },
-  { code: "ES", name: "Spain", language: "es" },
-  { code: "DE", name: "Germany", language: "de" },
-  { code: "IT", name: "Italy", language: "it" }
+  { code: "IN", name: "India", language: "hi", flag: "🇮🇳" },
+  { code: "JP", name: "Japan", language: "ja", flag: "🇯🇵" },
+  { code: "KR", name: "Korea", language: "ko", flag: "🇰🇷" },
+  { code: "CN", name: "China", language: "zh", flag: "🇨🇳" },
+  { code: "TH", name: "Thailand", language: "th", flag: "🇹🇭" },
+  { code: "FR", name: "France", language: "fr", flag: "🇫🇷" },
+  { code: "ES", name: "Spain", language: "es", flag: "🇪🇸" },
+  { code: "DE", name: "Germany", language: "de", flag: "🇩🇪" },
+  { code: "IT", name: "Italy", language: "it", flag: "🇮🇹" }
 ];
 
 // Pagination

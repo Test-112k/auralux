@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS } from "../lib/constants";
@@ -9,6 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 function MainComponent() {
   // State variables
@@ -40,6 +47,9 @@ function MainComponent() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const observer = useRef<IntersectionObserver | null>(null);
+  
+  // Reference for content area to scroll to top on new content selection
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Initial load
   useEffect(() => {
@@ -61,6 +71,11 @@ function MainComponent() {
   // Content details fetching
   useEffect(() => {
     if (selectedContent?.id) {
+      // Scroll to top when new content is selected
+      if (contentRef.current) {
+        contentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      
       if (selectedContent.media_type === "movie") {
         fetchMovieDetails(selectedContent.id);
       } else {
@@ -217,13 +232,17 @@ function MainComponent() {
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.REGIONAL) {
-        const [trendingResponse, popularResponse] = await Promise.all([
+        // For regional, get both native language content and English language content about the region
+        const [trendingResponse, popularResponse, englishContentResponse] = await Promise.all([
           fetch(
             `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=1`
           ),
           fetch(
             `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=vote_count.desc&page=1`
           ),
+          fetch(
+            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_keywords=${selectedRegion.name.toLowerCase()}&language=en-US&sort_by=popularity.desc&page=1`
+          )
         ]);
 
         if (!trendingResponse.ok || !popularResponse.ok) {
@@ -232,9 +251,18 @@ function MainComponent() {
 
         const trendingData = await trendingResponse.json();
         const popularData = await popularResponse.json();
+        const englishData = await englishContentResponse.json();
+
+        // Combine regional content with English content about the region
+        const combinedPopularResults = [...popularData.results];
+        if (englishData.results && englishData.results.length > 0) {
+          combinedPopularResults.push(...englishData.results.filter(item => 
+            !popularData.results.some(existing => existing.id === item.id))
+          );
+        }
 
         setTrendingHindi(formatContentData(trendingData.results, "movie"));
-        setHindiContent(formatContentData(popularData.results, "movie"));
+        setHindiContent(formatContentData(combinedPopularResults, "movie"));
         
         setHasMore(popularData.page < popularData.total_pages);
       }
@@ -308,6 +336,8 @@ function MainComponent() {
       if (!response.ok) throw new Error("Failed to fetch TV details");
       const data = await response.json();
 
+      console.log("TV details:", data);
+
       // Update selected content with IMDB ID if available
       if (data.external_ids?.imdb_id) {
         setSelectedContent(prev => ({...prev, imdb_id: data.external_ids.imdb_id}));
@@ -320,8 +350,10 @@ function MainComponent() {
       setSeasons(validSeasons);
 
       if (validSeasons.length > 0) {
-        setSelectedSeason(validSeasons[0].season_number);
-        await fetchSeasonEpisodes(id, validSeasons[0].season_number);
+        // Default to the first valid season
+        const firstSeasonNumber = validSeasons[0].season_number;
+        setSelectedSeason(firstSeasonNumber);
+        await fetchSeasonEpisodes(id, firstSeasonNumber);
         setSelectedEpisode(1);
       }
     } catch (error) {
@@ -353,12 +385,15 @@ function MainComponent() {
 
   const fetchSeasonEpisodes = async (id, seasonNumber) => {
     try {
+      console.log(`Fetching episodes for season ${seasonNumber}`);
       const response = await fetch(
         `${TMDB_API_BASE}/tv/${id}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`
       );
       if (!response.ok) throw new Error("Failed to fetch season episodes");
       const data = await response.json();
+      console.log("Season episodes:", data);
       setEpisodes(data.episodes || []);
+      setSelectedEpisode(1); // Reset to first episode when season changes
     } catch (error) {
       console.error("Error fetching season episodes:", error);
       setError("Failed to load episodes");
@@ -366,8 +401,9 @@ function MainComponent() {
   };
 
   const handleSeasonChange = async (seasonNumber) => {
+    console.log(`Season changed to ${seasonNumber}`);
     setSelectedSeason(parseInt(seasonNumber));
-    setSelectedEpisode(1);
+    
     if (selectedContent?.id) {
       await fetchSeasonEpisodes(selectedContent.id, seasonNumber);
     }
@@ -376,6 +412,7 @@ function MainComponent() {
   const getStreamingUrl = (content) => {
     if (!content?.id) return "";
 
+    // Try all available server options
     // Use IMDB ID if available for VidAPI
     if (selectedServer === "vidapi" && content.imdb_id) {
       if (content.media_type === "movie") {
@@ -385,33 +422,39 @@ function MainComponent() {
       }
     }
 
-    // Fall back to TMDB ID
+    // Use streamable server as an additional option
+    if (selectedServer === "streamable") {
+      if (content.media_type === "movie") {
+        return STREAMING_SERVERS.streamable.movieUrl(content.id);
+      } else {
+        return STREAMING_SERVERS.streamable.tvUrl(content.id, selectedSeason, selectedEpisode);
+      }
+    }
+
+    // Fall back to TMDB ID with vidsrc
     if (content.media_type === "movie") {
-      return selectedServer === "vidsrc" 
-        ? STREAMING_SERVERS.vidsrc.movieUrl(content.id)
-        : STREAMING_SERVERS.vidapi.movieUrl(content.id);
+      return STREAMING_SERVERS.vidsrc.movieUrl(content.id);
     } else {
-      return selectedServer === "vidsrc" 
-        ? STREAMING_SERVERS.vidsrc.tvUrl(content.id, selectedSeason, selectedEpisode)
-        : STREAMING_SERVERS.vidapi.tvUrl(content.id, selectedSeason, selectedEpisode);
+      return STREAMING_SERVERS.vidsrc.tvUrl(content.id, selectedSeason, selectedEpisode);
     }
   };
 
   const handleContentSelection = async (content) => {
-    setSelectedContent(content);
-    setSearchQuery("");
-    setSearchResults([]);
-
-    try {
-      if (content.media_type === "movie") {
-        await fetchMovieDetails(content.id);
-      } else {
-        await fetchTVDetails(content.id);
-      }
-    } catch (error) {
-      console.error("Error fetching content details:", error);
-      setError("Failed to load content details");
-    }
+    // Set to null first to ensure re-rendering
+    setSelectedContent(null);
+    
+    // Reset these values when selecting new content
+    setSelectedSeason(1);
+    setSelectedEpisode(1);
+    setSeasons([]);
+    setEpisodes([]);
+    
+    // Then set the new content after a brief delay to ensure proper re-rendering
+    setTimeout(() => {
+      setSelectedContent(content);
+      setSearchQuery("");
+      setSearchResults([]);
+    }, 100);
   };
 
   const handleReturnHome = () => {
@@ -428,7 +471,9 @@ function MainComponent() {
   };
 
   const handleRegionChange = (code) => {
-    setSelectedRegion(REGIONS.find(r => r.code === code) || REGIONS[0]);
+    const newRegion = REGIONS.find(r => r.code === code) || REGIONS[0];
+    setSelectedRegion(newRegion);
+    console.log("Region changed to:", newRegion);
   };
 
   if (loading && !selectedContent) {
@@ -543,21 +588,24 @@ function MainComponent() {
               </button>
               
               {contentType === CONTENT_TYPES.REGIONAL && (
-                <Select
-                  value={selectedRegion.code}
-                  onValueChange={(code) => handleRegionChange(code)}
-                >
-                  <SelectTrigger className="w-[180px] bg-[#232323] border-none">
-                    <SelectValue placeholder="Select Region" />
-                  </SelectTrigger>
-                  <SelectContent>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1 bg-[#232323] rounded-md border border-gray-700">
+                    <span className="text-lg mr-1">{selectedRegion.flag}</span>
+                    <span>{selectedRegion.name}</span>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-[#232323] border border-gray-700 max-h-60 overflow-y-auto">
                     {REGIONS.map((region) => (
-                      <SelectItem key={region.code} value={region.code}>
-                        {region.name}
-                      </SelectItem>
+                      <DropdownMenuItem 
+                        key={region.code}
+                        className="flex items-center gap-2 hover:bg-[#2a2a2a] cursor-pointer"
+                        onClick={() => handleRegionChange(region.code)}
+                      >
+                        <span className="text-lg mr-1">{region.flag}</span>
+                        <span>{region.name}</span>
+                      </DropdownMenuItem>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -651,24 +699,26 @@ function MainComponent() {
             </button>
             
             {contentType === CONTENT_TYPES.REGIONAL && (
-              <Select
-                value={selectedRegion.code}
-                onValueChange={(code) => {
-                  handleRegionChange(code);
-                  setMobileMenuOpen(false);
-                }}
-              >
-                <SelectTrigger className="w-full bg-[#232323] border-none">
-                  <SelectValue placeholder="Select Region" />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="mt-2 p-2 bg-[#232323] rounded-lg">
+                <div className="text-sm text-gray-300 mb-2">Select Region:</div>
+                <div className="grid grid-cols-3 gap-2">
                   {REGIONS.map((region) => (
-                    <SelectItem key={region.code} value={region.code}>
-                      {region.name}
-                    </SelectItem>
+                    <button
+                      key={region.code}
+                      className={`flex flex-col items-center justify-center p-2 rounded ${
+                        selectedRegion.code === region.code ? "bg-purple-500" : "bg-[#2a2a2a]"
+                      }`}
+                      onClick={() => {
+                        handleRegionChange(region.code);
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <span className="text-2xl">{region.flag}</span>
+                      <span className="text-xs mt-1">{region.name}</span>
+                    </button>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -676,7 +726,7 @@ function MainComponent() {
 
       <main className="container mx-auto pt-24 px-4 pb-12">
         {selectedContent ? (
-          <div className="mt-4">
+          <div className="mt-4" ref={contentRef}>
             <div className="mb-6">
               <h1 className="text-3xl font-bold mb-2">{selectedContent.title}</h1>
               {selectedContent.title_japanese && (
@@ -697,6 +747,7 @@ function MainComponent() {
                     >
                       <option value="vidsrc">VidSrc</option>
                       <option value="vidapi">VidAPI</option>
+                      <option value="streamable">Streamable</option>
                     </select>
 
                     {selectedContent.media_type === "tv" && (
@@ -814,7 +865,7 @@ function MainComponent() {
                                   Episode {episode.episode_number}
                                 </div>
                                 <div className="text-sm text-gray-400">
-                                  {episode.name}
+                                  {episode.name || `Episode ${episode.episode_number}`}
                                 </div>
                               </div>
                             </div>
@@ -913,22 +964,22 @@ function MainComponent() {
               </div>
               
               {contentType === CONTENT_TYPES.REGIONAL && (
-                <div className="mt-2">
-                  <Select
-                    value={selectedRegion.code}
-                    onValueChange={handleRegionChange}
-                  >
-                    <SelectTrigger className="w-full bg-[#232323] border-none">
-                      <SelectValue placeholder="Select Region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REGIONS.map((region) => (
-                        <SelectItem key={region.code} value={region.code}>
-                          {region.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="mt-2 p-2 bg-[#232323] rounded-lg">
+                  <div className="text-sm text-gray-300 mb-2">Select Region:</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {REGIONS.map((region) => (
+                      <button
+                        key={region.code}
+                        className={`flex flex-col items-center justify-center p-2 rounded ${
+                          selectedRegion.code === region.code ? "bg-purple-500" : "bg-[#2a2a2a]"
+                        }`}
+                        onClick={() => handleRegionChange(region.code)}
+                      >
+                        <span className="text-2xl">{region.flag}</span>
+                        <span className="text-xs mt-1">{region.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
