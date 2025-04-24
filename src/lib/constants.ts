@@ -13,9 +13,9 @@ export const STREAMING_SERVERS = {
   },
   vidapi: {
     name: "VidAPI",
-    movieUrl: (id: string) => `https://vidapi.cyou/imdb.php?id=${id}`,
+    movieUrl: (id: string) => `https://vidapi.cyou/imdb.php?id=${id}&hl=hi`,
     tvUrl: (id: string, season: number, episode: number) => 
-      `https://vidapi.cyou/tv.php?id=${id}&s=${season}&e=${episode}`
+      `https://vidapi.cyou/tv.php?id=${id}&s=${season}&e=${episode}&hl=hi`
   }
 };
 

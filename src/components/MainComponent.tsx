@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Search } from "lucide-react";
+import { Search, ArrowLeft } from "lucide-react";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE } from "../lib/constants";
 import RelatedTitles from "./RelatedTitles";
 
@@ -469,6 +468,14 @@ function MainComponent() {
   return (
     <div className="min-h-screen bg-[#0F0F0F] text-white">
       <nav className="bg-[#161616] p-4 fixed w-full top-0 z-50 border-b border-gray-800">
+        {selectedContent && (
+          <button
+            onClick={handleReturnHome}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+        )}
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-8">
             <h1
