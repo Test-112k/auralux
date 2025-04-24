@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
-import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE } from "../lib/constants";
+import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS } from "../lib/constants";
 import RelatedTitles from "./RelatedTitles";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function MainComponent() {
   // State variables
@@ -106,6 +113,10 @@ function MainComponent() {
           break;
         case CONTENT_TYPES.HINDI_ENG:
           endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi|en&region=IN&page=${nextPage}`;
+          setter = setHindiContent;
+          break;
+        case CONTENT_TYPES.REGIONAL:
+          endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=${nextPage}`;
           setter = setHindiContent;
           break;
       }
@@ -229,6 +240,27 @@ function MainComponent() {
         setHindiContent(formatContentData(popularData.results, "movie"));
         
         setHasMore(popularData.page < popularData.total_pages);
+      } else if (contentType === CONTENT_TYPES.REGIONAL) {
+        const [trendingResponse, popularResponse] = await Promise.all([
+          fetch(
+            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=1`
+          ),
+          fetch(
+            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=vote_count.desc&page=1`
+          ),
+        ]);
+
+        if (!trendingResponse.ok || !popularResponse.ok) {
+          throw new Error(`Failed to fetch ${selectedRegion.name} content`);
+        }
+
+        const trendingData = await trendingResponse.json();
+        const popularData = await popularResponse.json();
+
+        setTrendingHindi(formatContentData(trendingData.results, "movie"));
+        setHindiContent(formatContentData(popularData.results, "movie"));
+        
+        setHasMore(popularData.page < popularData.total_pages);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -261,14 +293,18 @@ function MainComponent() {
       setLoading(true);
       let endpoint;
       
-      if (contentType === CONTENT_TYPES.MOVIE) {
-        endpoint = `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${searchQuery}`;
-      } else if (contentType === CONTENT_TYPES.TV) {
-        endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}`;
-      } else if (contentType === CONTENT_TYPES.ANIME) {
-        endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_genres=16`;
-      } else if (contentType === CONTENT_TYPES.HINDI_ENG) {
-        endpoint = `${TMDB_API_BASE}/search/multi?api_key=${TMDB_API_KEY}&query=${searchQuery}&region=IN`;
+      if (contentType === CONTENT_TYPES.REGIONAL) {
+        endpoint = `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}`;
+      } else {
+        if (contentType === CONTENT_TYPES.MOVIE) {
+          endpoint = `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${searchQuery}`;
+        } else if (contentType === CONTENT_TYPES.TV) {
+          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}`;
+        } else if (contentType === CONTENT_TYPES.ANIME) {
+          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_genres=16`;
+        } else if (contentType === CONTENT_TYPES.HINDI_ENG) {
+          endpoint = `${TMDB_API_BASE}/search/multi?api_key=${TMDB_API_KEY}&query=${searchQuery}&region=IN`;
+        }
       }
       
       const response = await fetch(endpoint);
@@ -417,6 +453,10 @@ function MainComponent() {
     setSearchResults([]);
   };
 
+  const handleRegionChange = (code) => {
+    setSelectedRegion(REGIONS.find(r => r.code === code) || REGIONS[0]);
+  };
+
   if (loading && !selectedContent) {
     return (
       <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
@@ -522,11 +562,29 @@ function MainComponent() {
                 TV Series
               </button>
               <button 
-                onClick={() => handleContentTypeChange(CONTENT_TYPES.HINDI_ENG)}
-                className={`${contentType === CONTENT_TYPES.HINDI_ENG ? "text-purple-500" : "text-gray-300"} hover:text-purple-500 transition-colors`}
+                onClick={() => handleContentTypeChange(CONTENT_TYPES.REGIONAL)}
+                className={`${contentType === CONTENT_TYPES.REGIONAL ? "text-purple-500" : "text-gray-300"} hover:text-purple-500 transition-colors`}
               >
-                Hindi-Eng
+                Regional
               </button>
+              
+              {contentType === CONTENT_TYPES.REGIONAL && (
+                <Select
+                  value={selectedRegion.code}
+                  onValueChange={(code) => setSelectedRegion(REGIONS.find(r => r.code === code) || REGIONS[0])}
+                >
+                  <SelectTrigger className="w-[180px] bg-[#232323] border-none">
+                    <SelectValue placeholder="Select Region" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REGIONS.map((region) => (
+                      <SelectItem key={region.code} value={region.code}>
+                        {region.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
           <div className="relative w-1/3">
@@ -608,15 +666,36 @@ function MainComponent() {
             </button>
             <button 
               onClick={() => {
-                handleContentTypeChange(CONTENT_TYPES.HINDI_ENG);
+                handleContentTypeChange(CONTENT_TYPES.REGIONAL);
                 setMobileMenuOpen(false);
               }}
               className={`w-full py-2 px-4 rounded text-left ${
-                contentType === CONTENT_TYPES.HINDI_ENG ? "bg-purple-500" : "bg-[#232323]"
+                contentType === CONTENT_TYPES.REGIONAL ? "bg-purple-500" : "bg-[#232323]"
               }`}
             >
-              Hindi
+              Regional
             </button>
+            
+            {contentType === CONTENT_TYPES.REGIONAL && (
+              <Select
+                value={selectedRegion.code}
+                onValueChange={(code) => {
+                  setSelectedRegion(REGIONS.find(r => r.code === code) || REGIONS[0]);
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <SelectTrigger className="w-full bg-[#232323] border-none">
+                  <SelectValue placeholder="Select Region" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REGIONS.map((region) => (
+                    <SelectItem key={region.code} value={region.code}>
+                      {region.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
       )}
@@ -854,12 +933,12 @@ function MainComponent() {
                   TV
                 </button>
                 <button
-                  onClick={() => handleContentTypeChange(CONTENT_TYPES.HINDI_ENG)}
+                  onClick={() => handleContentTypeChange(CONTENT_TYPES.REGIONAL)}
                   className={`py-2 rounded text-xs ${
-                    contentType === CONTENT_TYPES.HINDI_ENG ? "bg-purple-500" : "bg-[#232323]"
+                    contentType === CONTENT_TYPES.REGIONAL ? "bg-purple-500" : "bg-[#232323]"
                   }`}
                 >
-                  Hindi
+                  Regional
                 </button>
               </div>
             </div>
