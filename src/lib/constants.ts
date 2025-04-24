@@ -13,21 +13,9 @@ export const STREAMING_SERVERS = {
   },
   vidapi: {
     name: "VidAPI",
-    movieUrl: (id: string) => `https://vidapi.xyz/embed/movie/${id}`,
+    movieUrl: (id: string) => `https://vidapi.xyz/embed/movie/tmdb/${id}`,
     tvUrl: (id: string, season: number, episode: number) => 
-      `https://vidapi.xyz/embed/tv/${id}/${season}/${episode}`
-  },
-  twoEmbed: {
-    name: "2Embed",
-    movieUrl: (id: string) => `https://www.2embed.cc/embed/${id}`,
-    tvUrl: (id: string, season: number, episode: number) => 
-      `https://www.2embed.cc/embedtv/${id}/${season}/${episode}`
-  },
-  superEmbed: {
-    name: "SuperEmbed",
-    movieUrl: (id: string) => `https://www.superembed.stream/movie/${id}`,
-    tvUrl: (id: string, season: number, episode: number) => 
-      `https://www.superembed.stream/tv/${id}/${season}/${episode}`
+      `https://vidapi.xyz/embed/tv/tmdb/${id}/${season}/${episode}`
   }
 };
 
@@ -37,3 +25,6 @@ export const CONTENT_TYPES = {
   MOVIE: "movie",
   TV: "tv"
 };
+
+// Pagination
+export const ITEMS_PER_PAGE = 20;
