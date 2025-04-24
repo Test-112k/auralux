@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { REGIONS } from '../lib/constants';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +13,14 @@ interface RegionSelectorProps {
 const RegionSelector = ({ selectedRegion, onRegionChange, className = '' }: RegionSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredRegions, setFilteredRegions] = useState(REGIONS);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Auto-focus search input when component mounts
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
 
   useEffect(() => {
     if (searchTerm) {
@@ -30,6 +38,7 @@ const RegionSelector = ({ selectedRegion, onRegionChange, className = '' }: Regi
     <div className={`bg-[#232323] rounded-lg p-4 shadow-lg ${className}`}>
       <div className="relative mb-4">
         <input
+          ref={searchInputRef}
           type="text"
           placeholder="Search country by name or code..."
           className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"

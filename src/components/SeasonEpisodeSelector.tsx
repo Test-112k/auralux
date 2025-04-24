@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { TMDB_API_KEY, TMDB_API_BASE } from '../lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2 } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 
 interface SeasonEpisodeSelectorProps {
   contentId: number;
@@ -23,6 +25,7 @@ const SeasonEpisodeSelector = ({
   const [episodes, setEpisodes] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchTVDetails = async () => {
@@ -41,6 +44,7 @@ const SeasonEpisodeSelector = ({
         const data = await response.json();
         console.log("TV details:", data);
 
+        // Filter out seasons with no episodes or special seasons (like season 0)
         const validSeasons = data.seasons.filter(
           (season: any) => season.season_number > 0 && season.episode_count > 0
         );
@@ -50,10 +54,16 @@ const SeasonEpisodeSelector = ({
         if (validSeasons.length > 0) {
           const seasonToFetch = selectedSeason || validSeasons[0].season_number;
           await fetchSeasonEpisodes(contentId, seasonToFetch);
+          onSeasonChange(seasonToFetch);
         }
       } catch (error) {
         console.error("Error fetching TV details:", error);
         setError("Failed to load TV details");
+        toast({
+          title: "Error loading TV details",
+          description: "Please try again later",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -71,6 +81,8 @@ const SeasonEpisodeSelector = ({
   const fetchSeasonEpisodes = async (id: number, seasonNumber: number) => {
     try {
       console.log(`Fetching episodes for season ${seasonNumber}`);
+      setLoading(true);
+      
       const response = await fetch(
         `${TMDB_API_BASE}/tv/${id}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`
       );
@@ -82,10 +94,27 @@ const SeasonEpisodeSelector = ({
       const data = await response.json();
       console.log("Season episodes:", data);
       
-      setEpisodes(data.episodes || []);
+      if (data.episodes && data.episodes.length > 0) {
+        setEpisodes(data.episodes);
+        
+        // If the current episode is greater than available episodes, reset to episode 1
+        if (selectedEpisode > data.episodes.length) {
+          onEpisodeChange(1);
+        }
+      } else {
+        setEpisodes([]);
+        onEpisodeChange(1);
+      }
     } catch (error) {
       console.error("Error fetching season episodes:", error);
       setError("Failed to load episodes");
+      toast({
+        title: "Error loading episodes",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,39 +130,47 @@ const SeasonEpisodeSelector = ({
     onEpisodeChange(episode);
   };
 
-  if (loading) {
+  if (loading && seasons.length === 0) {
     return (
       <div className="flex items-center gap-2">
-        <div className="animate-spin h-4 w-4 border-t-2 border-purple-500 rounded-full"></div>
-        <span>Loading...</span>
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Loading seasons...</span>
       </div>
     );
   }
 
-  if (error) {
+  if (error && seasons.length === 0) {
     return <div className="text-red-500 text-sm">{error}</div>;
   }
 
   return (
     <div className="flex flex-wrap gap-4 items-center">
       {seasons.length > 0 && (
-        <Select
-          value={selectedSeason.toString()}
-          onValueChange={handleSeasonChange}
-        >
-          <SelectTrigger className="w-[180px] bg-[#232323]">
-            <SelectValue placeholder="Select Season" />
-          </SelectTrigger>
-          <SelectContent>
-            <ScrollArea className="h-[200px]">
-              {seasons.map((season) => (
-                <SelectItem key={season.season_number} value={season.season_number.toString()}>
-                  Season {season.season_number}
-                </SelectItem>
-              ))}
-            </ScrollArea>
-          </SelectContent>
-        </Select>
+        <div className="relative">
+          <Select
+            value={selectedSeason.toString()}
+            onValueChange={handleSeasonChange}
+            disabled={loading}
+          >
+            <SelectTrigger className="w-[180px] bg-[#232323]">
+              <SelectValue placeholder="Select Season" />
+            </SelectTrigger>
+            <SelectContent>
+              <ScrollArea className="h-[200px]">
+                {seasons.map((season) => (
+                  <SelectItem key={season.season_number} value={season.season_number.toString()}>
+                    Season {season.season_number}
+                  </SelectItem>
+                ))}
+              </ScrollArea>
+            </SelectContent>
+          </Select>
+          {loading && seasons.length > 0 && (
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </div>
+          )}
+        </div>
       )}
 
       {episodes.length > 0 && (

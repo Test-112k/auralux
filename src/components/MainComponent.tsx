@@ -2,26 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS } from "../lib/constants";
-import RelatedTitles from "./RelatedTitles";
 import RegionSelector from "./RegionSelector";
-import SeasonEpisodeSelector from "./SeasonEpisodeSelector";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import ContentViewer from "./ContentViewer";
+import { useToast } from "@/components/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 function MainComponent() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   // State variables
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,8 +42,8 @@ function MainComponent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const observer = useRef<IntersectionObserver | null>(null);
   
-  // Reference for content area to scroll to top on new content selection
-  const contentRef = useRef<HTMLDivElement>(null);
+  // Add mobile menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Check for stored content from search page
   useEffect(() => {
@@ -91,11 +79,6 @@ function MainComponent() {
   // Content details fetching
   useEffect(() => {
     if (selectedContent?.id) {
-      // Scroll to top when new content is selected
-      if (contentRef.current) {
-        contentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-      
       if (selectedContent.media_type === "movie") {
         fetchMovieDetails(selectedContent.id);
       } else {
@@ -167,6 +150,11 @@ function MainComponent() {
     } catch (error) {
       console.error("Error loading more content:", error);
       setError(`Failed to load more ${contentType}`);
+      toast({
+        title: "Error loading content",
+        description: `Failed to load more ${contentType}`,
+        variant: "destructive",
+      });
     } finally {
       setLoadingMore(false);
     }
@@ -179,9 +167,6 @@ function MainComponent() {
       behavior: "smooth"
     });
   };
-
-  // Add mobile menu state
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Update content fetch to filter by region
   const fetchTrendingAndPopular = async () => {
@@ -277,6 +262,11 @@ function MainComponent() {
     } catch (error) {
       console.error("Error fetching data:", error);
       setError(`Failed to load ${contentType} data`);
+      toast({
+        title: "Error loading data",
+        description: `Failed to load ${contentType} data`,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -341,6 +331,11 @@ function MainComponent() {
     } catch (error) {
       console.error("Search error:", error);
       setError("Search failed");
+      toast({
+        title: "Search failed",
+        description: "Please try again",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -379,6 +374,11 @@ function MainComponent() {
     } catch (error) {
       console.error("Error fetching TV details:", error);
       setError("Failed to load TV details");
+      toast({
+        title: "Error loading TV details",
+        description: "Please try again later",
+        variant: "destructive",
+      });
     }
   };
   
@@ -400,6 +400,11 @@ function MainComponent() {
     } catch (error) {
       console.error("Error fetching movie details:", error);
       setError("Failed to load movie details");
+      toast({
+        title: "Error loading movie details",
+        description: "Please try again later",
+        variant: "destructive",
+      });
     }
   };
 
@@ -428,15 +433,11 @@ function MainComponent() {
     } catch (error) {
       console.error("Error fetching season episodes:", error);
       setError("Failed to load episodes");
-    }
-  };
-
-  const handleSeasonChange = async (seasonNumber) => {
-    console.log(`Season changed to ${seasonNumber}`);
-    setSelectedSeason(parseInt(seasonNumber));
-    
-    if (selectedContent?.id) {
-      await fetchSeasonEpisodes(selectedContent.id, seasonNumber);
+      toast({
+        title: "Error loading episodes",
+        description: "Please try again later",
+        variant: "destructive",
+      });
     }
   };
 
@@ -488,7 +489,7 @@ function MainComponent() {
       setSearchResults([]);
       
       // Scroll to top when content is selected
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }, 100);
   };
 
@@ -581,7 +582,7 @@ function MainComponent() {
   const currentContent = getCurrentContent();
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F] text-white">
+    <div className="min-h-screen bg-[#0F0F0F] text-white overflow-x-hidden">
       <nav className="bg-[#161616] p-4 fixed w-full top-0 z-50 border-b border-gray-800">
         {selectedContent && (
           <button
@@ -676,12 +677,16 @@ function MainComponent() {
                       className="p-3 hover:bg-[#2a2a2a] cursor-pointer flex items-center gap-3 border-b border-gray-700 last:border-none"
                       onClick={() => handleContentSelection(item)}
                     >
-                      {item.poster_path && (
+                      {item.poster_path ? (
                         <img
                           src={item.poster_path}
                           alt={item.title}
                           className="w-12 h-16 object-cover rounded"
                         />
+                      ) : (
+                        <div className="w-12 h-16 bg-gray-800 flex items-center justify-center rounded">
+                          <span className="text-xs text-gray-500">No Image</span>
+                        </div>
                       )}
                       <div>
                         <div className="font-medium text-sm">{item.title}</div>
@@ -771,188 +776,21 @@ function MainComponent() {
         </div>
       )}
 
-      <main className="container mx-auto pt-24 px-4 pb-12 overflow-x-hidden">
+      <main className="container mx-auto pt-24 px-4 pb-12 overflow-hidden">
         {selectedContent ? (
-          <div className="mt-4" ref={contentRef} id="content-top">
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold mb-2">{selectedContent.title}</h1>
-              {selectedContent.original_title !== selectedContent.title && (
-                <h2 className="text-lg text-gray-400">
-                  {selectedContent.original_title}
-                </h2>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-              <div className="space-y-4">
-                <div className="bg-[#161616] p-4 rounded-lg">
-                  <div className="flex flex-wrap items-center gap-4 mb-4">
-                    <Select
-                      value={selectedServer}
-                      onValueChange={(value) => setSelectedServer(value)}
-                    >
-                      <SelectTrigger className="w-[180px] bg-[#232323]">
-                        <SelectValue placeholder="Select Server" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="vidsrc">VidSrc</SelectItem>
-                        <SelectItem value="vidapi">VidAPI</SelectItem>
-                        <SelectItem value="streamable">Streamable</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    {selectedContent.media_type === "tv" && (
-                      <SeasonEpisodeSelector
-                        contentId={selectedContent.id}
-                        selectedSeason={selectedSeason}
-                        selectedEpisode={selectedEpisode}
-                        onSeasonChange={handleSeasonChange}
-                        onEpisodeChange={setSelectedEpisode}
-                      />
-                    )}
-                  </div>
-
-                  <div className="w-full aspect-video bg-black rounded-lg overflow-hidden">
-                    {loading ? (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
-                      </div>
-                    ) : (
-                      <iframe
-                        key={`${selectedContent.id}-${selectedSeason}-${selectedEpisode}-${selectedServer}`}
-                        src={getStreamingUrl(selectedContent)}
-                        className="w-full h-full"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="autoplay; encrypted-media; picture-in-picture"
-                        referrerPolicy="origin"
-                        title={selectedContent.title}
-                        loading="eager"
-                      ></iframe>
-                    )}
-                  </div>
-                </div>
-
-                {selectedContent.media_type === "tv" && episodes.length > 0 && (
-                  <>
-                    <div className="flex items-center justify-between gap-4">
-                      <button
-                        onClick={() =>
-                          setSelectedEpisode((prev) => Math.max(1, prev - 1))
-                        }
-                        disabled={selectedEpisode <= 1 || loading}
-                        className={`px-4 py-2 rounded text-sm ${
-                          selectedEpisode <= 1 || loading
-                            ? "bg-gray-700 cursor-not-allowed"
-                            : "bg-purple-500 hover:bg-purple-600"
-                        }`}
-                      >
-                        Previous Episode
-                      </button>
-                      <button
-                        onClick={() => setSelectedEpisode((prev) => prev + 1)}
-                        disabled={selectedEpisode >= episodes.length || loading}
-                        className={`px-4 py-2 rounded text-sm ${
-                          selectedEpisode >= episodes.length || loading
-                            ? "bg-gray-700 cursor-not-allowed"
-                            : "bg-purple-500 hover:bg-purple-600"
-                        }`}
-                      >
-                        Next Episode
-                      </button>
-                    </div>
-
-                    <div className="bg-[#161616] p-4 rounded-lg">
-                      <h3 className="text-xl font-bold mb-4">Episodes</h3>
-                      <ScrollArea className="h-[500px] pr-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {episodes.map((episode) => (
-                            <div
-                              key={`episode-${episode.episode_number}`}
-                              className={`p-4 rounded-lg cursor-pointer transition-all ${
-                                selectedEpisode === episode.episode_number
-                                  ? "bg-purple-500"
-                                  : "bg-[#232323] hover:bg-[#2a2a2a]"
-                              }`}
-                              onClick={() =>
-                                setSelectedEpisode(episode.episode_number)
-                              }
-                            >
-                              <div className="flex gap-4">
-                                {episode.still_path && (
-                                  <img
-                                    src={`https://image.tmdb.org/t/p/w300${episode.still_path}`}
-                                    alt={`Episode ${episode.episode_number}`}
-                                    className="w-40 h-24 object-cover rounded"
-                                    loading="lazy"
-                                  />
-                                )}
-                                <div>
-                                  <div className="font-semibold mb-1">
-                                    Episode {episode.episode_number}
-                                  </div>
-                                  <div className="text-sm text-gray-400">
-                                    {episode.name || `Episode ${episode.episode_number}`}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-[#161616] p-4 rounded-lg">
-                  <img
-                    src={selectedContent.poster_path}
-                    alt={selectedContent.title}
-                    className="w-full rounded-lg shadow-lg mb-4"
-                  />
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-gray-400">Score:</span>
-                      <span className="bg-purple-500 px-2 py-1 rounded">
-                        {selectedContent.score?.toFixed(1) || "N/A"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-gray-400">Status:</span>
-                      <span>{selectedContent.status || "Unknown"}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-gray-400">Type:</span>
-                      <span>{selectedContent.media_type === "movie" ? "Movie" : "TV Series"}</span>
-                    </div>
-                    {selectedContent.year && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-400">Year:</span>
-                        <span>{selectedContent.year}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="bg-[#161616] p-4 rounded-lg">
-                  <h3 className="font-bold mb-2">Synopsis</h3>
-                  <p className="text-sm text-gray-300 leading-relaxed">
-                    {selectedContent.overview || "No synopsis available."}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Related Titles */}
-            <div className="mt-8">
-              <RelatedTitles 
-                contentId={selectedContent.id}
-                mediaType={selectedContent.media_type}
-                onSelectContent={handleContentSelection}
-              />
-            </div>
-          </div>
+          <ContentViewer
+            selectedContent={selectedContent}
+            selectedServer={selectedServer}
+            setSelectedServer={setSelectedServer}
+            selectedSeason={selectedSeason}
+            setSelectedSeason={setSelectedSeason}
+            selectedEpisode={selectedEpisode}
+            setSelectedEpisode={setSelectedEpisode}
+            episodes={episodes}
+            loading={loading}
+            getStreamingUrl={getStreamingUrl}
+            handleContentSelection={handleContentSelection}
+          />
         ) : (
           <>
             <div className="bg-[#161616] p-4 rounded-lg mb-8 md:hidden">
@@ -1002,108 +840,4 @@ function MainComponent() {
             </div>
 
             <section className="mb-10">
-              <h2 className="text-2xl font-bold mb-6 text-white">
-                Trending {contentType.charAt(0).toUpperCase() + contentType.slice(1)}
-                {contentType === CONTENT_TYPES.REGIONAL && ` (${selectedRegion.name})`}
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {currentContent.trending.map((item) => (
-                  <div
-                    key={`trending-${item.id}`}
-                    className="bg-[#161616] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300"
-                    onClick={() => handleContentSelection(item)}
-                  >
-                    {item.poster_path ? (
-                      <img
-                        src={item.poster_path}
-                        alt={item.title}
-                        className="w-full aspect-[2/3] object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[2/3] bg-gray-800 flex items-center justify-center">
-                        <span className="text-gray-500">No Image</span>
-                      </div>
-                    )}
-                    <div className="p-3">
-                      <p className="line-clamp-1 text-sm font-semibold">
-                        {item.title || "Unknown Title"}
-                      </p>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
-                        <span className="text-xs bg-purple-500 px-1.5 py-0.5 rounded">
-                          {item.score?.toFixed(1) || "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold mb-6 text-white">
-                Popular {contentType.charAt(0).toUpperCase() + contentType.slice(1)}
-                {contentType === CONTENT_TYPES.REGIONAL && ` (${selectedRegion.name})`}
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {currentContent.popular.map((item, index) => (
-                  <div
-                    key={`popular-${item.id}-${index}`}
-                    className="bg-[#161616] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300"
-                    onClick={() => handleContentSelection(item)}
-                    ref={
-                      index === currentContent.popular.length - 1
-                        ? lastElementRef
-                        : null
-                    }
-                  >
-                    {item.poster_path ? (
-                      <img
-                        src={item.poster_path}
-                        alt={item.title}
-                        className="w-full aspect-[2/3] object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[2/3] bg-gray-800 flex items-center justify-center">
-                        <span className="text-gray-500">No Image</span>
-                      </div>
-                    )}
-                    <div className="p-3">
-                      <p className="line-clamp-1 text-sm font-semibold">
-                        {item.title || "Unknown Title"}
-                      </p>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
-                        <span className="text-xs bg-purple-500 px-1.5 py-0.5 rounded">
-                          {item.score?.toFixed(1) || "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {loadingMore && (
-              <div className="flex justify-center my-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-      
-      {/* Scroll to top button */}
-      <button
-        onClick={scrollToTop}
-        className="fixed right-6 bottom-6 bg-purple-500 p-3 rounded-full shadow-lg z-50 hover:bg-purple-600 transition-colors"
-      >
-        <ArrowUp className="w-5 h-5" />
-      </button>
-    </div>
-  );
-}
-
-export default MainComponent;
+              <h2 className="text-2xl font-bold mb-6 text-

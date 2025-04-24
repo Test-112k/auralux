@@ -33,7 +33,7 @@ export const CONTENT_TYPES = {
   REGIONAL: "regional"
 };
 
-// Available Regions
+// Available Regions - Extended list
 export const REGIONS = [
   { code: "IN", name: "India", language: "hi", flag: "🇮🇳" },
   { code: "JP", name: "Japan", language: "ja", flag: "🇯🇵" },
@@ -49,7 +49,19 @@ export const REGIONS = [
   { code: "CA", name: "Canada", language: "en", flag: "🇨🇦" },
   { code: "AU", name: "Australia", language: "en", flag: "🇦🇺" },
   { code: "BR", name: "Brazil", language: "pt", flag: "🇧🇷" },
-  { code: "MX", name: "Mexico", language: "es", flag: "🇲🇽" }
+  { code: "MX", name: "Mexico", language: "es", flag: "🇲🇽" },
+  { code: "RU", name: "Russia", language: "ru", flag: "🇷🇺" },
+  { code: "TR", name: "Turkey", language: "tr", flag: "🇹🇷" },
+  { code: "ID", name: "Indonesia", language: "id", flag: "🇮🇩" },
+  { code: "MY", name: "Malaysia", language: "ms", flag: "🇲🇾" },
+  { code: "PH", name: "Philippines", language: "tl", flag: "🇵🇭" },
+  { code: "PK", name: "Pakistan", language: "ur", flag: "🇵🇰" },
+  { code: "SA", name: "Saudi Arabia", language: "ar", flag: "🇸🇦" },
+  { code: "AE", name: "United Arab Emirates", language: "ar", flag: "🇦🇪" },
+  { code: "IL", name: "Israel", language: "he", flag: "🇮🇱" },
+  { code: "EG", name: "Egypt", language: "ar", flag: "🇪🇬" },
+  { code: "NG", name: "Nigeria", language: "en", flag: "🇳🇬" },
+  { code: "ZA", name: "South Africa", language: "en", flag: "🇿🇦" }
 ];
 
 // Pagination
