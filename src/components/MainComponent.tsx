@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Search, ArrowLeft } from "lucide-react";
+import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE } from "../lib/constants";
 import RelatedTitles from "./RelatedTitles";
 
@@ -129,6 +129,18 @@ function MainComponent() {
     }
   };
 
+  // Add new scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
+
+  // Add mobile menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Update Hindi content fetch to filter only Indian content
   const fetchTrendingAndPopular = async () => {
     try {
       setLoading(true);
@@ -202,7 +214,7 @@ function MainComponent() {
             `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi&sort_by=popularity.desc&page=1`
           ),
           fetch(
-            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi|en&region=IN&sort_by=popularity.desc&page=1`
+            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi&region=IN&sort_by=popularity.desc&page=1`
           ),
         ]);
 
@@ -478,6 +490,12 @@ function MainComponent() {
         )}
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-8">
+            <button
+              className="md:hidden text-gray-400 hover:text-white transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
             <h1
               onClick={handleReturnHome}
               className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
@@ -550,6 +568,58 @@ function MainComponent() {
           </div>
         </div>
       </nav>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed top-16 left-0 right-0 bg-[#161616] z-40 border-b border-gray-800 animate-fade-in">
+          <div className="p-4 space-y-2">
+            <button 
+              onClick={() => {
+                handleContentTypeChange(CONTENT_TYPES.ANIME);
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full py-2 px-4 rounded text-left ${
+                contentType === CONTENT_TYPES.ANIME ? "bg-purple-500" : "bg-[#232323]"
+              }`}
+            >
+              Anime
+            </button>
+            <button 
+              onClick={() => {
+                handleContentTypeChange(CONTENT_TYPES.MOVIE);
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full py-2 px-4 rounded text-left ${
+                contentType === CONTENT_TYPES.MOVIE ? "bg-purple-500" : "bg-[#232323]"
+              }`}
+            >
+              Movies
+            </button>
+            <button 
+              onClick={() => {
+                handleContentTypeChange(CONTENT_TYPES.TV);
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full py-2 px-4 rounded text-left ${
+                contentType === CONTENT_TYPES.TV ? "bg-purple-500" : "bg-[#232323]"
+              }`}
+            >
+              TV Series
+            </button>
+            <button 
+              onClick={() => {
+                handleContentTypeChange(CONTENT_TYPES.HINDI_ENG);
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full py-2 px-4 rounded text-left ${
+                contentType === CONTENT_TYPES.HINDI_ENG ? "bg-purple-500" : "bg-[#232323]"
+              }`}
+            >
+              Hindi
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="container mx-auto pt-24 px-4 pb-12">
         {selectedContent ? (
@@ -705,12 +775,6 @@ function MainComponent() {
                     </div>
                   </>
                 )}
-                
-                <RelatedTitles 
-                  contentId={selectedContent.id}
-                  mediaType={selectedContent.media_type}
-                  onSelectContent={handleContentSelection}
-                />
               </div>
 
               <div className="space-y-4">
@@ -751,6 +815,15 @@ function MainComponent() {
                 </div>
               </div>
             </div>
+            
+            {/* Related Titles moved to bottom */}
+            <div className="mt-8">
+              <RelatedTitles 
+                contentId={selectedContent.id}
+                mediaType={selectedContent.media_type}
+                onSelectContent={handleContentSelection}
+              />
+            </div>
           </div>
         ) : (
           <>
@@ -765,197 +838,4 @@ function MainComponent() {
                   Anime
                 </button>
                 <button
-                  onClick={() => handleContentTypeChange(CONTENT_TYPES.MOVIE)}
-                  className={`py-2 rounded text-xs ${
-                    contentType === CONTENT_TYPES.MOVIE ? "bg-purple-500" : "bg-[#232323]"
-                  }`}
-                >
-                  Movies
-                </button>
-                <button
-                  onClick={() => handleContentTypeChange(CONTENT_TYPES.TV)}
-                  className={`py-2 rounded text-xs ${
-                    contentType === CONTENT_TYPES.TV ? "bg-purple-500" : "bg-[#232323]"
-                  }`}
-                >
-                  TV
-                </button>
-                <button
-                  onClick={() => handleContentTypeChange(CONTENT_TYPES.HINDI_ENG)}
-                  className={`py-2 rounded text-xs ${
-                    contentType === CONTENT_TYPES.HINDI_ENG ? "bg-purple-500" : "bg-[#232323]"
-                  }`}
-                >
-                  Hindi-Eng
-                </button>
-              </div>
-            </div>
-            
-            <section className="mb-12">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
-                {contentType === CONTENT_TYPES.ANIME ? "Trending Anime" : 
-                 contentType === CONTENT_TYPES.MOVIE ? "Trending Movies" : 
-                 contentType === CONTENT_TYPES.TV ? "Trending TV Series" : "Trending Hindi Content"}
-              </h2>
-              {loading ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {currentContent.trending.map((item) => (
-                    <div
-                      key={`trending-${item.id}`}
-                      className="group cursor-pointer"
-                      onClick={() => handleContentSelection(item)}
-                    >
-                      <div className="relative overflow-hidden rounded-lg">
-                        {item.poster_path ? (
-                          <img
-                            src={item.poster_path}
-                            alt={item.title}
-                            className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full aspect-[2/3] bg-[#232323] rounded-lg flex items-center justify-center">
-                            <span className="text-gray-500">No Image</span>
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                          <div>
-                            <h3 className="text-sm font-medium line-clamp-2">
-                              {item.title}
-                            </h3>
-                            <div className="text-xs text-gray-400 mt-1">
-                              Score: {item.score || "N/A"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="pb-12">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
-                {contentType === CONTENT_TYPES.ANIME ? "Popular Anime" : 
-                 contentType === CONTENT_TYPES.MOVIE ? "Popular Movies" : 
-                 contentType === CONTENT_TYPES.TV ? "Popular TV Series" : "Hindi-Eng Content"}
-              </h2>
-              {loading ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {currentContent.popular.map((item, index) => {
-                    if (index === currentContent.popular.length - 1) {
-                      return (
-                        <div
-                          ref={lastElementRef}
-                          key={`popular-${item.id}`}
-                          className="group cursor-pointer"
-                          onClick={() => handleContentSelection(item)}
-                        >
-                          <div className="relative overflow-hidden rounded-lg">
-                            {item.poster_path ? (
-                              <img
-                                src={item.poster_path}
-                                alt={item.title}
-                                className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="w-full aspect-[2/3] bg-[#232323] rounded-lg flex items-center justify-center">
-                                <span className="text-gray-500">No Image</span>
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                              <div>
-                                <h3 className="text-sm font-medium line-clamp-2">
-                                  {item.title}
-                                </h3>
-                                <div className="text-xs text-gray-400 mt-1">
-                                  Score: {item.score || "N/A"}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div
-                          key={`popular-${item.id}`}
-                          className="group cursor-pointer"
-                          onClick={() => handleContentSelection(item)}
-                        >
-                          <div className="relative overflow-hidden rounded-lg">
-                            {item.poster_path ? (
-                              <img
-                                src={item.poster_path}
-                                alt={item.title}
-                                className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="w-full aspect-[2/3] bg-[#232323] rounded-lg flex items-center justify-center">
-                                <span className="text-gray-500">No Image</span>
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                              <div>
-                                <h3 className="text-sm font-medium line-clamp-2">
-                                  {item.title}
-                                </h3>
-                                <div className="text-xs text-gray-400 mt-1">
-                                  Score: {item.score || "N/A"}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
-              )}
-              {loadingMore && (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-                </div>
-              )}
-            </section>
-          </>
-        )}
-      </main>
-
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          
-          .animate-spin {
-            animation: spin 1s linear infinite;
-          }
-  
-          .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-          }
-        `}
-      </style>
-    </div>
-  );
-}
-
-export default MainComponent;
+                  onClick={() => handleContentTypeChange(CONTENT_TYPES.MOVIE
