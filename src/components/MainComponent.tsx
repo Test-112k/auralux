@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS } from "../lib/constants";
@@ -23,6 +24,7 @@ function MainComponent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [contentType, setContentType] = useState(CONTENT_TYPES.ANIME);
+  const [selectedRegion, setSelectedRegion] = useState(REGIONS[0]); // Default to first region (India)
   
   // Content lists
   const [trendingAnime, setTrendingAnime] = useState([]);
@@ -43,7 +45,7 @@ function MainComponent() {
   // Initial load
   useEffect(() => {
     fetchTrendingAndPopular();
-  }, [contentType]);
+  }, [contentType, selectedRegion]);
 
   // Search functionality
   useEffect(() => {
@@ -55,7 +57,7 @@ function MainComponent() {
     } else {
       setSearchResults([]);
     }
-  }, [searchQuery, contentType]);
+  }, [searchQuery, contentType, selectedRegion]);
 
   // Content details fetching
   useEffect(() => {
@@ -72,7 +74,7 @@ function MainComponent() {
   useEffect(() => {
     setPage(1);
     setHasMore(true);
-  }, [contentType]);
+  }, [contentType, selectedRegion]);
 
   // Infinite scroll implementation with proper typing
   const lastElementRef = useCallback(node => {
@@ -111,10 +113,6 @@ function MainComponent() {
           endpoint = `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16&page=${nextPage}`;
           setter = setPopularTV;
           break;
-        case CONTENT_TYPES.HINDI_ENG:
-          endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi|en&region=IN&page=${nextPage}`;
-          setter = setHindiContent;
-          break;
         case CONTENT_TYPES.REGIONAL:
           endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=${nextPage}`;
           setter = setHindiContent;
@@ -151,7 +149,7 @@ function MainComponent() {
   // Add mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Update Hindi content fetch to filter only Indian content
+  // Update content fetch to filter by region
   const fetchTrendingAndPopular = async () => {
     try {
       setLoading(true);
@@ -219,27 +217,6 @@ function MainComponent() {
         setPopularTV(formatContentData(popularData.results, "tv"));
         
         setHasMore(popularData.page < popularData.total_pages);
-      } else if (contentType === CONTENT_TYPES.HINDI_ENG) {
-        const [trendingResponse, popularResponse] = await Promise.all([
-          fetch(
-            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi&sort_by=popularity.desc&page=1`
-          ),
-          fetch(
-            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi&region=IN&sort_by=popularity.desc&page=1`
-          ),
-        ]);
-
-        if (!trendingResponse.ok || !popularResponse.ok) {
-          throw new Error("Failed to fetch Hindi-Eng content");
-        }
-
-        const trendingData = await trendingResponse.json();
-        const popularData = await popularResponse.json();
-
-        setTrendingHindi(formatContentData(trendingData.results, "movie"));
-        setHindiContent(formatContentData(popularData.results, "movie"));
-        
-        setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.REGIONAL) {
         const [trendingResponse, popularResponse] = await Promise.all([
           fetch(
@@ -302,8 +279,6 @@ function MainComponent() {
           endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}`;
         } else if (contentType === CONTENT_TYPES.ANIME) {
           endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_genres=16`;
-        } else if (contentType === CONTENT_TYPES.HINDI_ENG) {
-          endpoint = `${TMDB_API_BASE}/search/multi?api_key=${TMDB_API_KEY}&query=${searchQuery}&region=IN`;
         }
       }
       
@@ -502,7 +477,7 @@ function MainComponent() {
           trending: trendingTV,
           popular: popularTV
         };
-      case CONTENT_TYPES.HINDI_ENG:
+      case CONTENT_TYPES.REGIONAL:
         return {
           trending: trendingHindi,
           popular: hindiContent
