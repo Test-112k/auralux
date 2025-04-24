@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { TMDB_API_KEY, TMDB_API_BASE } from "../lib/constants";
 
 interface RelatedTitlesProps {
@@ -14,7 +14,8 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-
+  const observer = useRef<IntersectionObserver | null>(null);
+  
   useEffect(() => {
     const fetchRelatedContent = async () => {
       if (!contentId) return;
@@ -32,7 +33,7 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
         
         const formattedData = data.results.map((item: any) => ({
           id: item.id,
-          title: mediaType === "movie" ? item.title : item.name,
+          title: mediaType === "movie" ? item.title || "N/A" : item.name || "N/A",
           overview: item.overview,
           poster_path: item.poster_path
             ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
@@ -58,6 +59,19 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
     fetchRelatedContent();
   }, [contentId, mediaType]);
 
+  const lastElementRef = useCallback(node => {
+    if (loading || loadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMoreRelated();
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [loading, loadingMore, hasMore]);
+
   const loadMoreRelated = async () => {
     if (loadingMore || !hasMore) return;
     
@@ -75,7 +89,7 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
       
       const formattedData = data.results.map((item: any) => ({
         id: item.id,
-        title: mediaType === "movie" ? item.title : item.name,
+        title: mediaType === "movie" ? item.title || "N/A" : item.name || "N/A",
         overview: item.overview,
         poster_path: item.poster_path
           ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
@@ -121,11 +135,12 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
         Related Titles
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {relatedContent.map((item) => (
+        {relatedContent.map((item, index) => (
           <div
-            key={`related-${item.id}`}
+            key={`related-${item.id}-${index}`}
             className="group cursor-pointer"
             onClick={() => onSelectContent(item)}
+            ref={index === relatedContent.length - 1 ? lastElementRef : null}
           >
             <div className="relative overflow-hidden rounded-lg">
               {item.poster_path ? (
@@ -154,25 +169,6 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
           </div>
         ))}
       </div>
-      
-      {hasMore && (
-        <div className="flex justify-center mt-6">
-          <button 
-            onClick={loadMoreRelated}
-            className="bg-[#232323] hover:bg-[#2a2a2a] text-white px-4 py-2 rounded-lg flex items-center gap-2"
-            disabled={loadingMore}
-          >
-            {loadingMore ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                <span>Loading...</span>
-              </>
-            ) : (
-              <span>Load More</span>
-            )}
-          </button>
-        </div>
-      )}
     </div>
   );
 };

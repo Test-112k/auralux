@@ -3,7 +3,7 @@
 export const TMDB_API_KEY = "54d82ce065f64ee04381a81d3bcc2455";
 export const TMDB_API_BASE = "https://api.themoviedb.org/3";
 
-// Streaming Servers
+// Streaming Servers with updated URLs
 export const STREAMING_SERVERS = {
   vidsrc: {
     name: "VidSrc",
@@ -13,9 +13,9 @@ export const STREAMING_SERVERS = {
   },
   vidapi: {
     name: "VidAPI",
-    movieUrl: (id: string) => `https://vidapi.cyou/imdb.php?id=${id}&hl=hi`,
+    movieUrl: (id: string) => `https://vidsrc.in/api/movie/${id}`,
     tvUrl: (id: string, season: number, episode: number) => 
-      `https://vidapi.cyou/tv.php?id=${id}&s=${season}&e=${episode}&hl=hi`
+      `https://vidsrc.in/api/tv/${id}/${season}/${episode}`
   },
   streamable: {
     name: "Streamable",
@@ -43,8 +43,21 @@ export const REGIONS = [
   { code: "FR", name: "France", language: "fr", flag: "🇫🇷" },
   { code: "ES", name: "Spain", language: "es", flag: "🇪🇸" },
   { code: "DE", name: "Germany", language: "de", flag: "🇩🇪" },
-  { code: "IT", name: "Italy", language: "it", flag: "🇮🇹" }
+  { code: "IT", name: "Italy", language: "it", flag: "🇮🇹" },
+  { code: "US", name: "United States", language: "en", flag: "🇺🇸" },
+  { code: "GB", name: "United Kingdom", language: "en", flag: "🇬🇧" },
+  { code: "CA", name: "Canada", language: "en", flag: "🇨🇦" },
+  { code: "AU", name: "Australia", language: "en", flag: "🇦🇺" },
+  { code: "BR", name: "Brazil", language: "pt", flag: "🇧🇷" },
+  { code: "MX", name: "Mexico", language: "es", flag: "🇲🇽" }
 ];
 
 // Pagination
 export const ITEMS_PER_PAGE = 20;
+
+// Search API endpoints
+export const SEARCH_API = {
+  MOVIE: `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=`,
+  TV: `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=`,
+  ANIME: `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=`
+};

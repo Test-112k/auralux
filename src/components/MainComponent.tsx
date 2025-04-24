@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS } from "../lib/constants";
@@ -16,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function MainComponent() {
   // State variables
@@ -31,6 +31,7 @@ function MainComponent() {
   const [error, setError] = useState(null);
   const [contentType, setContentType] = useState(CONTENT_TYPES.ANIME);
   const [selectedRegion, setSelectedRegion] = useState(REGIONS[0]); // Default to first region (India)
+  const [showRegionSelector, setShowRegionSelector] = useState(false);
   
   // Content lists
   const [trendingAnime, setTrendingAnime] = useState([]);
@@ -233,15 +234,12 @@ function MainComponent() {
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.REGIONAL) {
         // For regional, get both native language content and English language content about the region
-        const [trendingResponse, popularResponse, englishContentResponse] = await Promise.all([
+        const [trendingResponse, popularResponse] = await Promise.all([
           fetch(
             `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=1`
           ),
           fetch(
-            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=vote_count.desc&page=1`
-          ),
-          fetch(
-            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_keywords=${selectedRegion.name.toLowerCase()}&language=en-US&sort_by=popularity.desc&page=1`
+            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=2`
           )
         ]);
 
@@ -251,18 +249,9 @@ function MainComponent() {
 
         const trendingData = await trendingResponse.json();
         const popularData = await popularResponse.json();
-        const englishData = await englishContentResponse.json();
-
-        // Combine regional content with English content about the region
-        const combinedPopularResults = [...popularData.results];
-        if (englishData.results && englishData.results.length > 0) {
-          combinedPopularResults.push(...englishData.results.filter(item => 
-            !popularData.results.some(existing => existing.id === item.id))
-          );
-        }
 
         setTrendingHindi(formatContentData(trendingData.results, "movie"));
-        setHindiContent(formatContentData(combinedPopularResults, "movie"));
+        setHindiContent(formatContentData(popularData.results, "movie"));
         
         setHasMore(popularData.page < popularData.total_pages);
       }
@@ -277,16 +266,20 @@ function MainComponent() {
   const formatContentData = (items, mediaType) => {
     return items.map((item) => ({
       id: item.id,
-      title: mediaType === "movie" ? item.title || "N/A" : item.name || "N/A",
-      overview: item.overview,
+      title: mediaType === "movie" ? item.title || item.name || "N/A" : item.name || item.title || "N/A",
+      original_title: mediaType === "movie" ? item.original_title || "N/A" : item.original_name || "N/A",
+      overview: item.overview || "No overview available",
       poster_path: item.poster_path
         ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
         : null,
-      score: item.vote_average,
+      backdrop_path: item.backdrop_path
+        ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
+        : null,
+      score: item.vote_average || 0,
       year: mediaType === "movie"
         ? (item.release_date?.split("-")[0] || "N/A")
         : (item.first_air_date?.split("-")[0] || "N/A"),
-      status: item.status,
+      status: item.status || "Unknown",
       media_type: mediaType,
       imdb_id: item.imdb_id || null
     }));
@@ -316,7 +309,7 @@ function MainComponent() {
       }
       
       const data = await response.json();
-      const mediaType = contentType === CONTENT_TYPES.MOVIE ? "movie" : "tv";
+      const mediaType = contentType === CONTENT_TYPES.MOVIE || contentType === CONTENT_TYPES.REGIONAL ? "movie" : "tv";
       const formattedResults = formatContentData(data.results, mediaType);
       
       setSearchResults(formattedResults);
@@ -350,11 +343,13 @@ function MainComponent() {
       setSeasons(validSeasons);
 
       if (validSeasons.length > 0) {
-        // Default to the first valid season
-        const firstSeasonNumber = validSeasons[0].season_number;
-        setSelectedSeason(firstSeasonNumber);
-        await fetchSeasonEpisodes(id, firstSeasonNumber);
-        setSelectedEpisode(1);
+        // Use the existing selectedSeason if it's valid, otherwise default to the first valid season
+        const seasonNumber = validSeasons.some(s => s.season_number === selectedSeason) 
+          ? selectedSeason 
+          : validSeasons[0].season_number;
+          
+        setSelectedSeason(seasonNumber);
+        await fetchSeasonEpisodes(id, seasonNumber);
       }
     } catch (error) {
       console.error("Error fetching TV details:", error);
@@ -392,8 +387,19 @@ function MainComponent() {
       if (!response.ok) throw new Error("Failed to fetch season episodes");
       const data = await response.json();
       console.log("Season episodes:", data);
-      setEpisodes(data.episodes || []);
-      setSelectedEpisode(1); // Reset to first episode when season changes
+      
+      if (data.episodes && data.episodes.length > 0) {
+        setEpisodes(data.episodes);
+        
+        // Keep the current episode if it's valid for the new season
+        const validEpisode = data.episodes.some(e => e.episode_number === selectedEpisode);
+        if (!validEpisode) {
+          setSelectedEpisode(1); // Reset to first episode if current episode isn't valid
+        }
+      } else {
+        setEpisodes([]);
+        setSelectedEpisode(1);
+      }
     } catch (error) {
       console.error("Error fetching season episodes:", error);
       setError("Failed to load episodes");
@@ -454,6 +460,9 @@ function MainComponent() {
       setSelectedContent(content);
       setSearchQuery("");
       setSearchResults([]);
+      
+      // Scroll to top when content is selected
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 100);
   };
 
@@ -473,6 +482,7 @@ function MainComponent() {
   const handleRegionChange = (code) => {
     const newRegion = REGIONS.find(r => r.code === code) || REGIONS[0];
     setSelectedRegion(newRegion);
+    setShowRegionSelector(false);
     console.log("Region changed to:", newRegion);
   };
 
@@ -581,31 +591,55 @@ function MainComponent() {
                 TV Series
               </button>
               <button 
-                onClick={() => handleContentTypeChange(CONTENT_TYPES.REGIONAL)}
+                onClick={() => {
+                  handleContentTypeChange(CONTENT_TYPES.REGIONAL);
+                  setShowRegionSelector(true);
+                }}
                 className={`${contentType === CONTENT_TYPES.REGIONAL ? "text-purple-500" : "text-gray-300"} hover:text-purple-500 transition-colors`}
               >
                 Regional
               </button>
               
               {contentType === CONTENT_TYPES.REGIONAL && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1 bg-[#232323] rounded-md border border-gray-700">
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowRegionSelector(!showRegionSelector)}
+                    className="flex items-center gap-2 px-3 py-1 bg-[#232323] rounded-md border border-gray-700 hover:bg-[#2a2a2a]"
+                  >
                     <span className="text-lg mr-1">{selectedRegion.flag}</span>
                     <span>{selectedRegion.name}</span>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-[#232323] border border-gray-700 max-h-60 overflow-y-auto">
-                    {REGIONS.map((region) => (
-                      <DropdownMenuItem 
-                        key={region.code}
-                        className="flex items-center gap-2 hover:bg-[#2a2a2a] cursor-pointer"
-                        onClick={() => handleRegionChange(region.code)}
-                      >
-                        <span className="text-lg mr-1">{region.flag}</span>
-                        <span>{region.name}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </button>
+                  
+                  {showRegionSelector && (
+                    <div className="absolute top-full mt-2 left-0 z-50 w-80">
+                      <div className="bg-[#232323] rounded-lg p-4">
+                        <div className="relative mb-4">
+                          <input
+                            type="text"
+                            placeholder="Search country..."
+                            className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                          {REGIONS.map((region) => (
+                            <button
+                              key={region.code}
+                              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+                                selectedRegion.code === region.code ? 'bg-purple-500' : 'bg-[#1a1a1a] hover:bg-[#2a2a2a]'
+                              }`}
+                              onClick={() => handleRegionChange(region.code)}
+                            >
+                              <span className="text-lg">{region.flag}</span>
+                              <span className="text-sm truncate">{region.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -621,28 +655,30 @@ function MainComponent() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             </div>
             {searchResults.length > 0 && (
-              <div className="absolute w-full mt-2 bg-[#232323] rounded-lg shadow-lg max-h-96 overflow-y-auto z-50 border border-gray-700">
-                {searchResults.map((item) => (
-                  <div
-                    key={`search-${item.id}`}
-                    className="p-3 hover:bg-[#2a2a2a] cursor-pointer flex items-center gap-3 border-b border-gray-700 last:border-none"
-                    onClick={() => handleContentSelection(item)}
-                  >
-                    {item.poster_path && (
-                      <img
-                        src={item.poster_path}
-                        alt={item.title}
-                        className="w-12 h-16 object-cover rounded"
-                      />
-                    )}
-                    <div>
-                      <div className="font-medium text-sm">{item.title}</div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        {item.media_type === "movie" ? "Movie" : "TV"} • {item.year || "N/A"}
+              <div className="absolute w-full mt-2 bg-[#232323] rounded-lg shadow-lg z-50 border border-gray-700">
+                <ScrollArea className="h-96">
+                  {searchResults.map((item) => (
+                    <div
+                      key={`search-${item.id}`}
+                      className="p-3 hover:bg-[#2a2a2a] cursor-pointer flex items-center gap-3 border-b border-gray-700 last:border-none"
+                      onClick={() => handleContentSelection(item)}
+                    >
+                      {item.poster_path && (
+                        <img
+                          src={item.poster_path}
+                          alt={item.title}
+                          className="w-12 h-16 object-cover rounded"
+                        />
+                      )}
+                      <div>
+                        <div className="font-medium text-sm">{item.title}</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {item.media_type === "movie" ? "Movie" : "TV"} • {item.year || "N/A"}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </ScrollArea>
               </div>
             )}
           </div>
@@ -699,24 +735,34 @@ function MainComponent() {
             </button>
             
             {contentType === CONTENT_TYPES.REGIONAL && (
-              <div className="mt-2 p-2 bg-[#232323] rounded-lg">
-                <div className="text-sm text-gray-300 mb-2">Select Region:</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {REGIONS.map((region) => (
-                    <button
-                      key={region.code}
-                      className={`flex flex-col items-center justify-center p-2 rounded ${
-                        selectedRegion.code === region.code ? "bg-purple-500" : "bg-[#2a2a2a]"
-                      }`}
-                      onClick={() => {
-                        handleRegionChange(region.code);
-                        setMobileMenuOpen(false);
-                      }}
-                    >
-                      <span className="text-2xl">{region.flag}</span>
-                      <span className="text-xs mt-1">{region.name}</span>
-                    </button>
-                  ))}
+              <div className="mt-2">
+                <div className="bg-[#232323] rounded-lg p-4">
+                  <div className="relative mb-4">
+                    <input
+                      type="text"
+                      placeholder="Search country..."
+                      className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                    {REGIONS.map((region) => (
+                      <button
+                        key={region.code}
+                        className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+                          selectedRegion.code === region.code ? 'bg-purple-500' : 'bg-[#1a1a1a] hover:bg-[#2a2a2a]'
+                        }`}
+                        onClick={() => {
+                          handleRegionChange(region.code);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <span className="text-lg">{region.flag}</span>
+                        <span className="text-sm truncate">{region.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -726,12 +772,12 @@ function MainComponent() {
 
       <main className="container mx-auto pt-24 px-4 pb-12">
         {selectedContent ? (
-          <div className="mt-4" ref={contentRef}>
+          <div className="mt-4" ref={contentRef} id="content-top">
             <div className="mb-6">
               <h1 className="text-3xl font-bold mb-2">{selectedContent.title}</h1>
-              {selectedContent.title_japanese && (
+              {selectedContent.original_title !== selectedContent.title && (
                 <h2 className="text-lg text-gray-400">
-                  {selectedContent.title_japanese}
+                  {selectedContent.original_title}
                 </h2>
               )}
             </div>
@@ -751,39 +797,31 @@ function MainComponent() {
                     </select>
 
                     {selectedContent.media_type === "tv" && (
-                      <>
+                      <div className="flex flex-wrap gap-4 items-center">
                         <select
-                          className="bg-[#232323] px-4 py-2 rounded text-sm"
+                          className="bg-[#232323] px-4 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           value={selectedSeason}
                           onChange={(e) => handleSeasonChange(e.target.value)}
-                          disabled={loading}
                         >
                           {seasons.map((season) => (
-                            <option
-                              key={season.season_number}
-                              value={season.season_number}
-                            >
+                            <option key={season.season_number} value={season.season_number}>
                               Season {season.season_number}
                             </option>
                           ))}
                         </select>
 
                         <select
-                          className="bg-[#232323] px-4 py-2 rounded text-sm"
+                          className="bg-[#232323] px-4 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           value={selectedEpisode}
-                          onChange={(e) => setSelectedEpisode(Number(e.target.value))}
-                          disabled={loading}
+                          onChange={(e) => setSelectedEpisode(parseInt(e.target.value))}
                         >
                           {episodes.map((episode) => (
-                            <option
-                              key={episode.episode_number}
-                              value={episode.episode_number}
-                            >
+                            <option key={episode.episode_number} value={episode.episode_number}>
                               Episode {episode.episode_number}
                             </option>
                           ))}
                         </select>
-                      </>
+                      </div>
                     )}
                   </div>
 
@@ -802,12 +840,13 @@ function MainComponent() {
                         allow="autoplay; encrypted-media; picture-in-picture"
                         referrerPolicy="origin"
                         title={selectedContent.title}
+                        loading="eager"
                       ></iframe>
                     )}
                   </div>
                 </div>
 
-                {selectedContent.media_type === "tv" && (
+                {selectedContent.media_type === "tv" && episodes.length > 0 && (
                   <>
                     <div className="flex items-center justify-between gap-4">
                       <button
@@ -838,40 +877,42 @@ function MainComponent() {
 
                     <div className="bg-[#161616] p-4 rounded-lg">
                       <h3 className="text-xl font-bold mb-4">Episodes</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {episodes.map((episode) => (
-                          <div
-                            key={`episode-${episode.episode_number}`}
-                            className={`p-4 rounded-lg cursor-pointer transition-all ${
-                              selectedEpisode === episode.episode_number
-                                ? "bg-purple-500"
-                                : "bg-[#232323] hover:bg-[#2a2a2a]"
-                            }`}
-                            onClick={() =>
-                              setSelectedEpisode(episode.episode_number)
-                            }
-                          >
-                            <div className="flex gap-4">
-                              {episode.still_path && (
-                                <img
-                                  src={`https://image.tmdb.org/t/p/w300${episode.still_path}`}
-                                  alt={`Episode ${episode.episode_number}`}
-                                  className="w-40 h-24 object-cover rounded"
-                                  loading="lazy"
-                                />
-                              )}
-                              <div>
-                                <div className="font-semibold mb-1">
-                                  Episode {episode.episode_number}
-                                </div>
-                                <div className="text-sm text-gray-400">
-                                  {episode.name || `Episode ${episode.episode_number}`}
+                      <ScrollArea className="h-[500px] pr-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {episodes.map((episode) => (
+                            <div
+                              key={`episode-${episode.episode_number}`}
+                              className={`p-4 rounded-lg cursor-pointer transition-all ${
+                                selectedEpisode === episode.episode_number
+                                  ? "bg-purple-500"
+                                  : "bg-[#232323] hover:bg-[#2a2a2a]"
+                              }`}
+                              onClick={() =>
+                                setSelectedEpisode(episode.episode_number)
+                              }
+                            >
+                              <div className="flex gap-4">
+                                {episode.still_path && (
+                                  <img
+                                    src={`https://image.tmdb.org/t/p/w300${episode.still_path}`}
+                                    alt={`Episode ${episode.episode_number}`}
+                                    className="w-40 h-24 object-cover rounded"
+                                    loading="lazy"
+                                  />
+                                )}
+                                <div>
+                                  <div className="font-semibold mb-1">
+                                    Episode {episode.episode_number}
+                                  </div>
+                                  <div className="text-sm text-gray-400">
+                                    {episode.name || `Episode ${episode.episode_number}`}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
                     </div>
                   </>
                 )}
@@ -888,7 +929,7 @@ function MainComponent() {
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-gray-400">Score:</span>
                       <span className="bg-purple-500 px-2 py-1 rounded">
-                        {selectedContent.score || "N/A"}
+                        {selectedContent.score?.toFixed(1) || "N/A"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
@@ -916,7 +957,7 @@ function MainComponent() {
               </div>
             </div>
             
-            {/* Related Titles moved to bottom */}
+            {/* Related Titles */}
             <div className="mt-8">
               <RelatedTitles 
                 contentId={selectedContent.id}
@@ -964,21 +1005,31 @@ function MainComponent() {
               </div>
               
               {contentType === CONTENT_TYPES.REGIONAL && (
-                <div className="mt-2 p-2 bg-[#232323] rounded-lg">
-                  <div className="text-sm text-gray-300 mb-2">Select Region:</div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {REGIONS.map((region) => (
-                      <button
-                        key={region.code}
-                        className={`flex flex-col items-center justify-center p-2 rounded ${
-                          selectedRegion.code === region.code ? "bg-purple-500" : "bg-[#2a2a2a]"
-                        }`}
-                        onClick={() => handleRegionChange(region.code)}
-                      >
-                        <span className="text-2xl">{region.flag}</span>
-                        <span className="text-xs mt-1">{region.name}</span>
-                      </button>
-                    ))}
+                <div className="mt-2">
+                  <div className="bg-[#232323] rounded-lg p-4">
+                    <div className="relative mb-4">
+                      <input
+                        type="text"
+                        placeholder="Search country..."
+                        className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                      {REGIONS.map((region) => (
+                        <button
+                          key={region.code}
+                          className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+                            selectedRegion.code === region.code ? 'bg-purple-500' : 'bg-[#1a1a1a] hover:bg-[#2a2a2a]'
+                          }`}
+                          onClick={() => handleRegionChange(region.code)}
+                        >
+                          <span className="text-lg">{region.flag}</span>
+                          <span className="text-sm truncate">{region.name}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
