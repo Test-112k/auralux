@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { Search } from "lucide-react";
+import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES } from "../lib/constants";
 
 function MainComponent() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -21,9 +21,6 @@ function MainComponent() {
   const [popularMovies, setPopularMovies] = useState([]);
   const [trendingTV, setTrendingTV] = useState([]);
   const [popularTV, setPopularTV] = useState([]);
-  
-  const TMDB_API_KEY = "54d82ce065f64ee04381a81d3bcc2455";
-  const TMDB_API_BASE = "https://api.themoviedb.org/3";
 
   useEffect(() => {
     fetchTrendingAndPopular();
@@ -382,7 +379,6 @@ function MainComponent() {
     );
   }
 
-  // Helper function to get the currently active content list based on content type
   const getCurrentContent = () => {
     switch (contentType) {
       case "anime":
