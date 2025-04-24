@@ -23,7 +23,8 @@ export const STREAMING_SERVERS = {
 export const CONTENT_TYPES = {
   ANIME: "anime",
   MOVIE: "movie",
-  TV: "tv"
+  TV: "tv",
+  HINDI_ENG: "hindi_eng"
 };
 
 // Pagination

@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search } from "lucide-react";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE } from "../lib/constants";
+import RelatedTitles from "./RelatedTitles";
 
 function MainComponent() {
   // State variables
@@ -23,6 +25,8 @@ function MainComponent() {
   const [popularMovies, setPopularMovies] = useState([]);
   const [trendingTV, setTrendingTV] = useState([]);
   const [popularTV, setPopularTV] = useState([]);
+  const [hindiContent, setHindiContent] = useState([]);
+  const [trendingHindi, setTrendingHindi] = useState([]);
   
   // Pagination variables
   const [page, setPage] = useState(1);
@@ -98,8 +102,12 @@ function MainComponent() {
           setter = setPopularMovies;
           break;
         case CONTENT_TYPES.TV:
-          endpoint = `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16&page=${nextPage}`;
           setter = setPopularTV;
+          break;
+        case CONTENT_TYPES.HINDI_ENG:
+          endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi|en&region=IN&page=${nextPage}`;
+          setter = setHindiContent;
           break;
       }
       
@@ -189,6 +197,27 @@ function MainComponent() {
         setPopularTV(formatContentData(popularData.results, "tv"));
         
         setHasMore(popularData.page < popularData.total_pages);
+      } else if (contentType === CONTENT_TYPES.HINDI_ENG) {
+        const [trendingResponse, popularResponse] = await Promise.all([
+          fetch(
+            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi&sort_by=popularity.desc&page=1`
+          ),
+          fetch(
+            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=hi|en&region=IN&sort_by=popularity.desc&page=1`
+          ),
+        ]);
+
+        if (!trendingResponse.ok || !popularResponse.ok) {
+          throw new Error("Failed to fetch Hindi-Eng content");
+        }
+
+        const trendingData = await trendingResponse.json();
+        const popularData = await popularResponse.json();
+
+        setTrendingHindi(formatContentData(trendingData.results, "movie"));
+        setHindiContent(formatContentData(popularData.results, "movie"));
+        
+        setHasMore(popularData.page < popularData.total_pages);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -211,7 +240,8 @@ function MainComponent() {
         ? (item.release_date?.split("-")[0] || "N/A")
         : (item.first_air_date?.split("-")[0] || "N/A"),
       status: item.status,
-      media_type: mediaType
+      media_type: mediaType,
+      imdb_id: item.imdb_id || null
     }));
   };
 
@@ -226,6 +256,8 @@ function MainComponent() {
         endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}`;
       } else if (contentType === CONTENT_TYPES.ANIME) {
         endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_genres=16`;
+      } else if (contentType === CONTENT_TYPES.HINDI_ENG) {
+        endpoint = `${TMDB_API_BASE}/search/multi?api_key=${TMDB_API_KEY}&query=${searchQuery}&region=IN`;
       }
       
       const response = await fetch(endpoint);
@@ -250,10 +282,15 @@ function MainComponent() {
   const fetchTVDetails = async (id) => {
     try {
       const response = await fetch(
-        `${TMDB_API_BASE}/tv/${id}?api_key=${TMDB_API_KEY}&language=en-US`
+        `${TMDB_API_BASE}/tv/${id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=external_ids`
       );
       if (!response.ok) throw new Error("Failed to fetch TV details");
       const data = await response.json();
+
+      // Update selected content with IMDB ID if available
+      if (data.external_ids?.imdb_id) {
+        setSelectedContent(prev => ({...prev, imdb_id: data.external_ids.imdb_id}));
+      }
 
       const validSeasons = data.seasons.filter(
         (season) => season.season_number > 0 && season.episode_count > 0
@@ -275,9 +312,16 @@ function MainComponent() {
   const fetchMovieDetails = async (id) => {
     try {
       const response = await fetch(
-        `${TMDB_API_BASE}/movie/${id}?api_key=${TMDB_API_KEY}&language=en-US`
+        `${TMDB_API_BASE}/movie/${id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=external_ids`
       );
       if (!response.ok) throw new Error("Failed to fetch movie details");
+      const data = await response.json();
+      
+      // Update selected content with IMDB ID if available
+      if (data.imdb_id) {
+        setSelectedContent(prev => ({...prev, imdb_id: data.imdb_id}));
+      }
+      
       setSeasons([]);
       setEpisodes([]);
     } catch (error) {
@@ -311,6 +355,16 @@ function MainComponent() {
   const getStreamingUrl = (content) => {
     if (!content?.id) return "";
 
+    // Use IMDB ID if available for VidAPI
+    if (selectedServer === "vidapi" && content.imdb_id) {
+      if (content.media_type === "movie") {
+        return STREAMING_SERVERS.vidapi.movieUrl(content.imdb_id);
+      } else {
+        return STREAMING_SERVERS.vidapi.tvUrl(content.imdb_id, selectedSeason, selectedEpisode);
+      }
+    }
+
+    // Fall back to TMDB ID
     if (content.media_type === "movie") {
       return selectedServer === "vidsrc" 
         ? STREAMING_SERVERS.vidsrc.movieUrl(content.id)
@@ -397,6 +451,11 @@ function MainComponent() {
           trending: trendingTV,
           popular: popularTV
         };
+      case CONTENT_TYPES.HINDI_ENG:
+        return {
+          trending: trendingHindi,
+          popular: hindiContent
+        };
       default:
         return {
           trending: [],
@@ -437,6 +496,12 @@ function MainComponent() {
               >
                 TV Series
               </button>
+              <button 
+                onClick={() => handleContentTypeChange(CONTENT_TYPES.HINDI_ENG)}
+                className={`${contentType === CONTENT_TYPES.HINDI_ENG ? "text-purple-500" : "text-gray-300"} hover:text-purple-500 transition-colors`}
+              >
+                Hindi-Eng
+              </button>
             </div>
           </div>
           <div className="relative w-1/3">
@@ -454,7 +519,7 @@ function MainComponent() {
               <div className="absolute w-full mt-2 bg-[#232323] rounded-lg shadow-lg max-h-96 overflow-y-auto z-50 border border-gray-700">
                 {searchResults.map((item) => (
                   <div
-                    key={item.id}
+                    key={`search-${item.id}`}
                     className="p-3 hover:bg-[#2a2a2a] cursor-pointer flex items-center gap-3 border-b border-gray-700 last:border-none"
                     onClick={() => handleContentSelection(item)}
                   >
@@ -479,7 +544,7 @@ function MainComponent() {
         </div>
       </nav>
 
-      <main className="container mx-auto pt-24 px-4">
+      <main className="container mx-auto pt-24 px-4 pb-12">
         {selectedContent ? (
           <div className="mt-4">
             <div className="mb-6">
@@ -552,12 +617,14 @@ function MainComponent() {
                       </div>
                     ) : (
                       <iframe
+                        key={`${selectedContent.id}-${selectedSeason}-${selectedEpisode}-${selectedServer}`}
                         src={getStreamingUrl(selectedContent)}
                         className="w-full h-full"
                         frameBorder="0"
                         allowFullScreen
                         allow="autoplay; encrypted-media; picture-in-picture"
                         referrerPolicy="origin"
+                        title={selectedContent.title}
                       ></iframe>
                     )}
                   </div>
@@ -597,7 +664,7 @@ function MainComponent() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {episodes.map((episode) => (
                           <div
-                            key={episode.episode_number}
+                            key={`episode-${episode.episode_number}`}
                             className={`p-4 rounded-lg cursor-pointer transition-all ${
                               selectedEpisode === episode.episode_number
                                 ? "bg-purple-500"
@@ -631,6 +698,12 @@ function MainComponent() {
                     </div>
                   </>
                 )}
+                
+                <RelatedTitles 
+                  contentId={selectedContent.id}
+                  mediaType={selectedContent.media_type}
+                  onSelectContent={handleContentSelection}
+                />
               </div>
 
               <div className="space-y-4">
@@ -675,10 +748,10 @@ function MainComponent() {
         ) : (
           <>
             <div className="bg-[#161616] p-4 rounded-lg mb-8 md:hidden">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <button
                   onClick={() => handleContentTypeChange(CONTENT_TYPES.ANIME)}
-                  className={`py-2 rounded ${
+                  className={`py-2 rounded text-xs ${
                     contentType === CONTENT_TYPES.ANIME ? "bg-purple-500" : "bg-[#232323]"
                   }`}
                 >
@@ -686,7 +759,7 @@ function MainComponent() {
                 </button>
                 <button
                   onClick={() => handleContentTypeChange(CONTENT_TYPES.MOVIE)}
-                  className={`py-2 rounded ${
+                  className={`py-2 rounded text-xs ${
                     contentType === CONTENT_TYPES.MOVIE ? "bg-purple-500" : "bg-[#232323]"
                   }`}
                 >
@@ -694,11 +767,19 @@ function MainComponent() {
                 </button>
                 <button
                   onClick={() => handleContentTypeChange(CONTENT_TYPES.TV)}
-                  className={`py-2 rounded ${
+                  className={`py-2 rounded text-xs ${
                     contentType === CONTENT_TYPES.TV ? "bg-purple-500" : "bg-[#232323]"
                   }`}
                 >
-                  TV Series
+                  TV
+                </button>
+                <button
+                  onClick={() => handleContentTypeChange(CONTENT_TYPES.HINDI_ENG)}
+                  className={`py-2 rounded text-xs ${
+                    contentType === CONTENT_TYPES.HINDI_ENG ? "bg-purple-500" : "bg-[#232323]"
+                  }`}
+                >
+                  Hindi-Eng
                 </button>
               </div>
             </div>
@@ -707,7 +788,8 @@ function MainComponent() {
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
                 <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
                 {contentType === CONTENT_TYPES.ANIME ? "Trending Anime" : 
-                 contentType === CONTENT_TYPES.MOVIE ? "Trending Movies" : "Trending TV Series"}
+                 contentType === CONTENT_TYPES.MOVIE ? "Trending Movies" : 
+                 contentType === CONTENT_TYPES.TV ? "Trending TV Series" : "Trending Hindi Content"}
               </h2>
               {loading ? (
                 <div className="flex justify-center py-12">
@@ -717,7 +799,7 @@ function MainComponent() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {currentContent.trending.map((item) => (
                     <div
-                      key={item.id}
+                      key={`trending-${item.id}`}
                       className="group cursor-pointer"
                       onClick={() => handleContentSelection(item)}
                     >
@@ -755,7 +837,8 @@ function MainComponent() {
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
                 <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
                 {contentType === CONTENT_TYPES.ANIME ? "Popular Anime" : 
-                 contentType === CONTENT_TYPES.MOVIE ? "Popular Movies" : "Popular TV Series"}
+                 contentType === CONTENT_TYPES.MOVIE ? "Popular Movies" : 
+                 contentType === CONTENT_TYPES.TV ? "Popular TV Series" : "Hindi-Eng Content"}
               </h2>
               {loading ? (
                 <div className="flex justify-center py-12">
@@ -768,7 +851,7 @@ function MainComponent() {
                       return (
                         <div
                           ref={lastElementRef}
-                          key={item.id}
+                          key={`popular-${item.id}`}
                           className="group cursor-pointer"
                           onClick={() => handleContentSelection(item)}
                         >
@@ -801,7 +884,7 @@ function MainComponent() {
                     } else {
                       return (
                         <div
-                          key={item.id}
+                          key={`popular-${item.id}`}
                           className="group cursor-pointer"
                           onClick={() => handleContentSelection(item)}
                         >
