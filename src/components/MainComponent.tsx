@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS } from "../lib/constants";
@@ -123,7 +122,7 @@ function MainComponent() {
       if (!response.ok) throw new Error(`Failed to fetch more ${contentType}`);
       
       const data = await response.json();
-      const formattedData = formatContentData(data.results, contentType === CONTENT_TYPES.MOVIE ? "movie" : "tv");
+      const formattedData = formatContentData(data.results, contentType === CONTENT_TYPES.MOVIE || contentType === CONTENT_TYPES.REGIONAL ? "movie" : "tv");
       
       // Append new data to existing data
       setter(prev => [...prev, ...formattedData]);
@@ -250,7 +249,7 @@ function MainComponent() {
   const formatContentData = (items, mediaType) => {
     return items.map((item) => ({
       id: item.id,
-      title: mediaType === "movie" ? item.title : item.name,
+      title: mediaType === "movie" ? item.title || "N/A" : item.name || "N/A",
       overview: item.overview,
       poster_path: item.poster_path
         ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
@@ -367,7 +366,7 @@ function MainComponent() {
   };
 
   const handleSeasonChange = async (seasonNumber) => {
-    setSelectedSeason(seasonNumber);
+    setSelectedSeason(parseInt(seasonNumber));
     setSelectedEpisode(1);
     if (selectedContent?.id) {
       await fetchSeasonEpisodes(selectedContent.id, seasonNumber);
@@ -546,7 +545,7 @@ function MainComponent() {
               {contentType === CONTENT_TYPES.REGIONAL && (
                 <Select
                   value={selectedRegion.code}
-                  onValueChange={(code) => setSelectedRegion(REGIONS.find(r => r.code === code) || REGIONS[0])}
+                  onValueChange={(code) => handleRegionChange(code)}
                 >
                   <SelectTrigger className="w-[180px] bg-[#232323] border-none">
                     <SelectValue placeholder="Select Region" />
@@ -655,7 +654,7 @@ function MainComponent() {
               <Select
                 value={selectedRegion.code}
                 onValueChange={(code) => {
-                  setSelectedRegion(REGIONS.find(r => r.code === code) || REGIONS[0]);
+                  handleRegionChange(code);
                   setMobileMenuOpen(false);
                 }}
               >
@@ -705,9 +704,7 @@ function MainComponent() {
                         <select
                           className="bg-[#232323] px-4 py-2 rounded text-sm"
                           value={selectedSeason}
-                          onChange={(e) =>
-                            handleSeasonChange(Number(e.target.value))
-                          }
+                          onChange={(e) => handleSeasonChange(e.target.value)}
                           disabled={loading}
                         >
                           {seasons.map((season) => (
@@ -723,9 +720,7 @@ function MainComponent() {
                         <select
                           className="bg-[#232323] px-4 py-2 rounded text-sm"
                           value={selectedEpisode}
-                          onChange={(e) =>
-                            setSelectedEpisode(Number(e.target.value))
-                          }
+                          onChange={(e) => setSelectedEpisode(Number(e.target.value))}
                           disabled={loading}
                         >
                           {episodes.map((episode) => (
@@ -916,11 +911,32 @@ function MainComponent() {
                   Regional
                 </button>
               </div>
+              
+              {contentType === CONTENT_TYPES.REGIONAL && (
+                <div className="mt-2">
+                  <Select
+                    value={selectedRegion.code}
+                    onValueChange={handleRegionChange}
+                  >
+                    <SelectTrigger className="w-full bg-[#232323] border-none">
+                      <SelectValue placeholder="Select Region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REGIONS.map((region) => (
+                        <SelectItem key={region.code} value={region.code}>
+                          {region.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <section className="mb-10">
               <h2 className="text-2xl font-bold mb-6 text-white">
                 Trending {contentType.charAt(0).toUpperCase() + contentType.slice(1)}
+                {contentType === CONTENT_TYPES.REGIONAL && ` (${selectedRegion.name})`}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {currentContent.trending.map((item) => (
@@ -943,7 +959,7 @@ function MainComponent() {
                     )}
                     <div className="p-3">
                       <p className="line-clamp-1 text-sm font-semibold">
-                        {item.title}
+                        {item.title || "N/A"}
                       </p>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
@@ -960,11 +976,12 @@ function MainComponent() {
             <section>
               <h2 className="text-2xl font-bold mb-6 text-white">
                 Popular {contentType.charAt(0).toUpperCase() + contentType.slice(1)}
+                {contentType === CONTENT_TYPES.REGIONAL && ` (${selectedRegion.name})`}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {currentContent.popular.map((item, index) => (
                   <div
-                    key={`popular-${item.id}`}
+                    key={`popular-${item.id}-${index}`}
                     className="bg-[#161616] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300"
                     onClick={() => handleContentSelection(item)}
                     ref={
@@ -987,7 +1004,7 @@ function MainComponent() {
                     )}
                     <div className="p-3">
                       <p className="line-clamp-1 text-sm font-semibold">
-                        {item.title}
+                        {item.title || "N/A"}
                       </p>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
