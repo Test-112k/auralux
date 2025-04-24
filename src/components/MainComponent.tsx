@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search } from "lucide-react";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE } from "../lib/constants";
@@ -29,7 +28,7 @@ function MainComponent() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const observer = useRef();
+  const observer = useRef<IntersectionObserver | null>(null);
 
   // Initial load
   useEffect(() => {
@@ -65,7 +64,7 @@ function MainComponent() {
     setHasMore(true);
   }, [contentType]);
 
-  // Infinite scroll implementation
+  // Infinite scroll implementation with proper typing
   const lastElementRef = useCallback(node => {
     if (loading || loadingMore) return;
     if (observer.current) observer.current.disconnect();
