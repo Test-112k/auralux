@@ -15,6 +15,8 @@ function MainComponent() {
   const [episodes, setEpisodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const TMDB_API_KEY = "54d82ce065f64ee04381a81d3bcc2455";
+  const TMDB_API_BASE = "https://api.themoviedb.org/3";
 
   useEffect(() => {
     fetchTrendingAndPopular();
@@ -39,15 +41,37 @@ function MainComponent() {
 
   const fetchTrendingAndPopular = async () => {
     try {
-      const response = await fetch("/api/trending-popular", {
-        method: "POST",
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch trending and popular anime");
+      const [trendingResponse, popularResponse] = await Promise.all([
+        fetch(
+          `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}&with_genres=16`
+        ),
+        fetch(
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=popularity.desc`
+        ),
+      ]);
+
+      if (!trendingResponse.ok || !popularResponse.ok) {
+        throw new Error("Failed to fetch anime");
       }
-      const data = await response.json();
-      setTrendingAnime(data.trending || []);
-      setPopularAnime(data.popular || []);
+
+      const trendingData = await trendingResponse.json();
+      const popularData = await popularResponse.json();
+
+      const formatAnimeData = (shows) =>
+        shows.map((show) => ({
+          id: show.id,
+          title: show.name,
+          overview: show.overview,
+          poster_path: show.poster_path
+            ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
+            : null,
+          score: show.vote_average,
+          year: show.first_air_date?.split("-")[0] || "N/A",
+          status: show.status,
+        }));
+
+      setTrendingAnime(formatAnimeData(trendingData.results));
+      setPopularAnime(formatAnimeData(popularData.results));
     } catch (error) {
       console.error("Error fetching data:", error);
       setError("Failed to load anime data");
@@ -59,28 +83,28 @@ function MainComponent() {
   const searchAnime = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          query: searchQuery,
-          preferDub: true
-        }),
-      });
+      const response = await fetch(
+        `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_genres=16`
+      );
+      
       if (!response.ok) {
         throw new Error("Search failed");
       }
+      
       const data = await response.json();
+      const formattedResults = data.results.map(show => ({
+        id: show.id,
+        title: show.name,
+        overview: show.overview,
+        poster_path: show.poster_path
+          ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
+          : null,
+        score: show.vote_average,
+        year: show.first_air_date?.split("-")[0] || "N/A",
+        status: show.status,
+      }));
       
-      const sortedResults = (data.results || []).sort((a, b) => {
-        const hasEnglishDubA = a.hasDub || false;
-        const hasEnglishDubB = b.hasDub || false;
-        return hasEnglishDubB - hasEnglishDubA;
-      });
-      
-      setSearchResults(sortedResults);
+      setSearchResults(formattedResults);
     } catch (error) {
       console.error("Search error:", error);
       setError("Search failed");
@@ -92,7 +116,7 @@ function MainComponent() {
   const fetchAnimeDetails = async (animeId) => {
     try {
       const response = await fetch(
-        `https://api.themoviedb.org/3/tv/${animeId}?api_key=54d82ce065f64ee04381a81d3bcc2455&language=en-US`
+        `https://api.themoviedb.org/3/tv/${animeId}?api_key=${TMDB_API_KEY}&language=en-US`
       );
       if (!response.ok) throw new Error("Failed to fetch anime details");
       const data = await response.json();
@@ -117,7 +141,7 @@ function MainComponent() {
   const fetchSeasonEpisodes = async (animeId, seasonNumber) => {
     try {
       const response = await fetch(
-        `https://api.themoviedb.org/3/tv/${animeId}/season/${seasonNumber}?api_key=54d82ce065f64ee04381a81d3bcc2455&language=en-US`
+        `https://api.themoviedb.org/3/tv/${animeId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`
       );
       if (!response.ok) throw new Error("Failed to fetch season episodes");
       const data = await response.json();
@@ -165,7 +189,7 @@ function MainComponent() {
 
     try {
       const response = await fetch(
-        `https://api.themoviedb.org/3/tv/${anime.id}?api_key=54d82ce065f64ee04381a81d3bcc2455&language=en-US`
+        `https://api.themoviedb.org/3/tv/${anime.id}?api_key=${TMDB_API_KEY}&language=en-US`
       );
       if (!response.ok) throw new Error("Failed to fetch anime details");
       const data = await response.json();
