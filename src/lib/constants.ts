@@ -7,21 +7,21 @@ export const TMDB_API_BASE = "https://api.themoviedb.org/3";
 export const STREAMING_SERVERS = {
   vidsrc: {
     name: "VidSrc",
-    movieUrl: (id: string) => `https://vidsrc.to/embed/movie/${id}`,
+    movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie/${id}`,
     tvUrl: (id: string, season: number, episode: number) => 
-      `https://vidsrc.to/embed/tv/${id}/${season}/${episode}`
+      `https://vidsrc.xyz/embed/tv/${id}/${season}-${episode}`
   },
   vidapi: {
     name: "VidAPI",
-    movieUrl: (id: string) => `https://vidsrc.in/api/movie/${id}`,
+    movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie?imdb=${id}`,
     tvUrl: (id: string, season: number, episode: number) => 
-      `https://vidsrc.in/api/tv/${id}/${season}/${episode}`
+      `https://vidsrc.xyz/embed/tv?imdb=${id}&season=${season}&episode=${episode}`
   },
   streamable: {
     name: "Streamable",
-    movieUrl: (id: string) => `https://embedsito.com/e/?tmdb=${id}`,
+    movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie?tmdb=${id}`,
     tvUrl: (id: string, season: number, episode: number) => 
-      `https://embedsito.com/e/?tmdb=${id}&s=${season}&e=${episode}`
+      `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${season}&episode=${episode}`
   }
 };
 

@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { TMDB_API_KEY, TMDB_API_BASE } from '../lib/constants';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SeasonEpisodeSelectorProps {
   contentId: number;
@@ -60,6 +62,12 @@ const SeasonEpisodeSelector = ({
     fetchTVDetails();
   }, [contentId]);
 
+  useEffect(() => {
+    if (contentId && selectedSeason > 0) {
+      fetchSeasonEpisodes(contentId, selectedSeason);
+    }
+  }, [contentId, selectedSeason]);
+
   const fetchSeasonEpisodes = async (id: number, seasonNumber: number) => {
     try {
       console.log(`Fetching episodes for season ${seasonNumber}`);
@@ -81,10 +89,16 @@ const SeasonEpisodeSelector = ({
     }
   };
 
-  const handleSeasonChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSeason = parseInt(e.target.value);
-    onSeasonChange(newSeason);
-    await fetchSeasonEpisodes(contentId, newSeason);
+  const handleSeasonChange = (value: string) => {
+    const season = parseInt(value);
+    console.log(`Season selected: ${season}`);
+    onSeasonChange(season);
+  };
+
+  const handleEpisodeChange = (value: string) => {
+    const episode = parseInt(value);
+    console.log(`Episode selected: ${episode}`);
+    onEpisodeChange(episode);
   };
 
   if (loading) {
@@ -103,31 +117,43 @@ const SeasonEpisodeSelector = ({
   return (
     <div className="flex flex-wrap gap-4 items-center">
       {seasons.length > 0 && (
-        <select
-          className="bg-[#232323] px-4 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-          value={selectedSeason}
-          onChange={handleSeasonChange}
+        <Select
+          value={selectedSeason.toString()}
+          onValueChange={handleSeasonChange}
         >
-          {seasons.map((season) => (
-            <option key={season.season_number} value={season.season_number}>
-              Season {season.season_number}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-[180px] bg-[#232323]">
+            <SelectValue placeholder="Select Season" />
+          </SelectTrigger>
+          <SelectContent>
+            <ScrollArea className="h-[200px]">
+              {seasons.map((season) => (
+                <SelectItem key={season.season_number} value={season.season_number.toString()}>
+                  Season {season.season_number}
+                </SelectItem>
+              ))}
+            </ScrollArea>
+          </SelectContent>
+        </Select>
       )}
 
       {episodes.length > 0 && (
-        <select
-          className="bg-[#232323] px-4 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-          value={selectedEpisode}
-          onChange={(e) => onEpisodeChange(parseInt(e.target.value))}
+        <Select
+          value={selectedEpisode.toString()}
+          onValueChange={handleEpisodeChange}
         >
-          {episodes.map((episode) => (
-            <option key={episode.episode_number} value={episode.episode_number}>
-              Episode {episode.episode_number}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-[180px] bg-[#232323]">
+            <SelectValue placeholder="Select Episode" />
+          </SelectTrigger>
+          <SelectContent>
+            <ScrollArea className="h-[200px]">
+              {episodes.map((episode) => (
+                <SelectItem key={episode.episode_number} value={episode.episode_number.toString()}>
+                  Episode {episode.episode_number}
+                </SelectItem>
+              ))}
+            </ScrollArea>
+          </SelectContent>
+        </Select>
       )}
     </div>
   );

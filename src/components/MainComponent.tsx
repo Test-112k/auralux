@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS } from "../lib/constants";
 import RelatedTitles from "./RelatedTitles";
+import RegionSelector from "./RegionSelector";
+import SeasonEpisodeSelector from "./SeasonEpisodeSelector";
 import {
   Select,
   SelectContent,
@@ -18,6 +21,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 function MainComponent() {
+  const navigate = useNavigate();
+  
   // State variables
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -51,6 +56,20 @@ function MainComponent() {
   
   // Reference for content area to scroll to top on new content selection
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Check for stored content from search page
+  useEffect(() => {
+    const storedContent = localStorage.getItem('selectedContent');
+    if (storedContent) {
+      try {
+        const parsedContent = JSON.parse(storedContent);
+        setSelectedContent(parsedContent);
+        localStorage.removeItem('selectedContent');
+      } catch (e) {
+        console.error("Error parsing stored content", e);
+      }
+    }
+  }, []);
 
   // Initial load
   useEffect(() => {
@@ -281,7 +300,8 @@ function MainComponent() {
         : (item.first_air_date?.split("-")[0] || "N/A"),
       status: item.status || "Unknown",
       media_type: mediaType,
-      imdb_id: item.imdb_id || null
+      imdb_id: item.imdb_id || null,
+      popularity: item.popularity || 0
     }));
   };
 
@@ -311,6 +331,11 @@ function MainComponent() {
       const data = await response.json();
       const mediaType = contentType === CONTENT_TYPES.MOVIE || contentType === CONTENT_TYPES.REGIONAL ? "movie" : "tv";
       const formattedResults = formatContentData(data.results, mediaType);
+      
+      // If there are too many results, suggest moving to search page
+      if (data.total_results > 20) {
+        console.log(`Found ${data.total_results} results, showing first 20`);
+      }
       
       setSearchResults(formattedResults);
     } catch (error) {
@@ -418,17 +443,18 @@ function MainComponent() {
   const getStreamingUrl = (content) => {
     if (!content?.id) return "";
 
-    // Try all available server options
-    // Use IMDB ID if available for VidAPI
-    if (selectedServer === "vidapi" && content.imdb_id) {
-      if (content.media_type === "movie") {
-        return STREAMING_SERVERS.vidapi.movieUrl(content.imdb_id);
-      } else {
-        return STREAMING_SERVERS.vidapi.tvUrl(content.imdb_id, selectedSeason, selectedEpisode);
+    // Use IMDB ID if available
+    if (content.imdb_id) {
+      if (selectedServer === "vidapi") {
+        if (content.media_type === "movie") {
+          return STREAMING_SERVERS.vidapi.movieUrl(content.imdb_id);
+        } else {
+          return STREAMING_SERVERS.vidapi.tvUrl(content.imdb_id, selectedSeason, selectedEpisode);
+        }
       }
     }
 
-    // Use streamable server as an additional option
+    // Use TMDB ID as fallback
     if (selectedServer === "streamable") {
       if (content.media_type === "movie") {
         return STREAMING_SERVERS.streamable.movieUrl(content.id);
@@ -437,7 +463,7 @@ function MainComponent() {
       }
     }
 
-    // Fall back to TMDB ID with vidsrc
+    // Default to vidsrc
     if (content.media_type === "movie") {
       return STREAMING_SERVERS.vidsrc.movieUrl(content.id);
     } else {
@@ -484,6 +510,14 @@ function MainComponent() {
     setSelectedRegion(newRegion);
     setShowRegionSelector(false);
     console.log("Region changed to:", newRegion);
+  };
+
+  // Handle search form submission
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.length > 2) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
   };
 
   if (loading && !selectedContent) {
@@ -612,38 +646,17 @@ function MainComponent() {
                   
                   {showRegionSelector && (
                     <div className="absolute top-full mt-2 left-0 z-50 w-80">
-                      <div className="bg-[#232323] rounded-lg p-4">
-                        <div className="relative mb-4">
-                          <input
-                            type="text"
-                            placeholder="Search country..."
-                            className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          />
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                          {REGIONS.map((region) => (
-                            <button
-                              key={region.code}
-                              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
-                                selectedRegion.code === region.code ? 'bg-purple-500' : 'bg-[#1a1a1a] hover:bg-[#2a2a2a]'
-                              }`}
-                              onClick={() => handleRegionChange(region.code)}
-                            >
-                              <span className="text-lg">{region.flag}</span>
-                              <span className="text-sm truncate">{region.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <RegionSelector 
+                        selectedRegion={selectedRegion} 
+                        onRegionChange={handleRegionChange} 
+                      />
                     </div>
                   )}
                 </div>
               )}
             </div>
           </div>
-          <div className="relative w-1/3">
+          <form onSubmit={handleSearchSubmit} className="relative w-1/3">
             <div className="relative">
               <input
                 type="text"
@@ -678,10 +691,19 @@ function MainComponent() {
                       </div>
                     </div>
                   ))}
+                  
+                  {searchResults.length > 10 && (
+                    <button
+                      onClick={() => navigate(`/search?q=${encodeURIComponent(searchQuery)}`)}
+                      className="w-full p-3 text-center text-sm text-purple-400 hover:text-purple-300 bg-[#1a1a1a]"
+                    >
+                      See all results
+                    </button>
+                  )}
                 </ScrollArea>
               </div>
             )}
-          </div>
+          </form>
         </div>
       </nav>
 
@@ -736,41 +758,20 @@ function MainComponent() {
             
             {contentType === CONTENT_TYPES.REGIONAL && (
               <div className="mt-2">
-                <div className="bg-[#232323] rounded-lg p-4">
-                  <div className="relative mb-4">
-                    <input
-                      type="text"
-                      placeholder="Search country..."
-                      className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                    {REGIONS.map((region) => (
-                      <button
-                        key={region.code}
-                        className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
-                          selectedRegion.code === region.code ? 'bg-purple-500' : 'bg-[#1a1a1a] hover:bg-[#2a2a2a]'
-                        }`}
-                        onClick={() => {
-                          handleRegionChange(region.code);
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <span className="text-lg">{region.flag}</span>
-                        <span className="text-sm truncate">{region.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <RegionSelector 
+                  selectedRegion={selectedRegion} 
+                  onRegionChange={(code) => {
+                    handleRegionChange(code);
+                    setMobileMenuOpen(false);
+                  }} 
+                />
               </div>
             )}
           </div>
         </div>
       )}
 
-      <main className="container mx-auto pt-24 px-4 pb-12">
+      <main className="container mx-auto pt-24 px-4 pb-12 overflow-x-hidden">
         {selectedContent ? (
           <div className="mt-4" ref={contentRef} id="content-top">
             <div className="mb-6">
@@ -786,42 +787,28 @@ function MainComponent() {
               <div className="space-y-4">
                 <div className="bg-[#161616] p-4 rounded-lg">
                   <div className="flex flex-wrap items-center gap-4 mb-4">
-                    <select
-                      className="bg-[#232323] px-4 py-2 rounded text-sm"
+                    <Select
                       value={selectedServer}
-                      onChange={(e) => setSelectedServer(e.target.value)}
+                      onValueChange={(value) => setSelectedServer(value)}
                     >
-                      <option value="vidsrc">VidSrc</option>
-                      <option value="vidapi">VidAPI</option>
-                      <option value="streamable">Streamable</option>
-                    </select>
+                      <SelectTrigger className="w-[180px] bg-[#232323]">
+                        <SelectValue placeholder="Select Server" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="vidsrc">VidSrc</SelectItem>
+                        <SelectItem value="vidapi">VidAPI</SelectItem>
+                        <SelectItem value="streamable">Streamable</SelectItem>
+                      </SelectContent>
+                    </Select>
 
                     {selectedContent.media_type === "tv" && (
-                      <div className="flex flex-wrap gap-4 items-center">
-                        <select
-                          className="bg-[#232323] px-4 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          value={selectedSeason}
-                          onChange={(e) => handleSeasonChange(e.target.value)}
-                        >
-                          {seasons.map((season) => (
-                            <option key={season.season_number} value={season.season_number}>
-                              Season {season.season_number}
-                            </option>
-                          ))}
-                        </select>
-
-                        <select
-                          className="bg-[#232323] px-4 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          value={selectedEpisode}
-                          onChange={(e) => setSelectedEpisode(parseInt(e.target.value))}
-                        >
-                          {episodes.map((episode) => (
-                            <option key={episode.episode_number} value={episode.episode_number}>
-                              Episode {episode.episode_number}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <SeasonEpisodeSelector
+                        contentId={selectedContent.id}
+                        selectedSeason={selectedSeason}
+                        selectedEpisode={selectedEpisode}
+                        onSeasonChange={handleSeasonChange}
+                        onEpisodeChange={setSelectedEpisode}
+                      />
                     )}
                   </div>
 
@@ -1006,31 +993,10 @@ function MainComponent() {
               
               {contentType === CONTENT_TYPES.REGIONAL && (
                 <div className="mt-2">
-                  <div className="bg-[#232323] rounded-lg p-4">
-                    <div className="relative mb-4">
-                      <input
-                        type="text"
-                        placeholder="Search country..."
-                        className="w-full bg-[#1a1a1a] text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                      {REGIONS.map((region) => (
-                        <button
-                          key={region.code}
-                          className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
-                            selectedRegion.code === region.code ? 'bg-purple-500' : 'bg-[#1a1a1a] hover:bg-[#2a2a2a]'
-                          }`}
-                          onClick={() => handleRegionChange(region.code)}
-                        >
-                          <span className="text-lg">{region.flag}</span>
-                          <span className="text-sm truncate">{region.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <RegionSelector 
+                    selectedRegion={selectedRegion} 
+                    onRegionChange={handleRegionChange} 
+                  />
                 </div>
               )}
             </div>
@@ -1061,7 +1027,7 @@ function MainComponent() {
                     )}
                     <div className="p-3">
                       <p className="line-clamp-1 text-sm font-semibold">
-                        {item.title || "N/A"}
+                        {item.title || "Unknown Title"}
                       </p>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
@@ -1106,7 +1072,7 @@ function MainComponent() {
                     )}
                     <div className="p-3">
                       <p className="line-clamp-1 text-sm font-semibold">
-                        {item.title || "N/A"}
+                        {item.title || "Unknown Title"}
                       </p>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
