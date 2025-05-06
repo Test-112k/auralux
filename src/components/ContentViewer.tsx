@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import SeasonEpisodeSelector from './SeasonEpisodeSelector';
 import PlayerWithControls from './PlayerWithControls';
 import RelatedTitles from './RelatedTitles';
-import { Telegram } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 interface ContentViewerProps {
   selectedContent: any;
@@ -106,7 +106,7 @@ const ContentViewer = ({
           className="text-purple-500 hover:text-purple-400 transition-colors"
           title="Join our Telegram channel"
         >
-          <Telegram size={24} />
+          <MessageCircle size={24} />
         </a>
       </div>
 
