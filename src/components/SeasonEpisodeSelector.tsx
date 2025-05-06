@@ -3,17 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { TMDB_API_KEY, TMDB_API_BASE } from '../lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 
 interface SeasonEpisodeSelectorProps {
   contentId: number;
@@ -37,17 +28,6 @@ const SeasonEpisodeSelector = ({
   const { toast } = useToast();
   const [fetchingEpisodes, setFetchingEpisodes] = useState<boolean>(false);
   
-  // Pagination for episodes
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const episodesPerPage = 20;
-  const totalPages = Math.ceil(episodes.length / episodesPerPage);
-  
-  // Calculate which episodes to display based on current page
-  const displayedEpisodes = episodes.slice(
-    (currentPage - 1) * episodesPerPage,
-    currentPage * episodesPerPage
-  );
-
   // Fetch TV details when contentId changes
   useEffect(() => {
     if (!contentId) return;
@@ -122,16 +102,6 @@ const SeasonEpisodeSelector = ({
     }
   }, [contentId, selectedSeason, seasons]);
 
-  // Determine which page contains the selected episode
-  useEffect(() => {
-    if (episodes.length > 0 && !fetchingEpisodes) {
-      const pageForSelectedEpisode = Math.ceil(selectedEpisode / episodesPerPage);
-      if (pageForSelectedEpisode !== currentPage && pageForSelectedEpisode > 0) {
-        setCurrentPage(pageForSelectedEpisode);
-      }
-    }
-  }, [selectedEpisode, episodes.length, fetchingEpisodes]);
-
   const fetchSeasonEpisodes = async (id: number, seasonNumber: number) => {
     try {
       console.log(`Fetching episodes for season ${seasonNumber}`);
@@ -188,76 +158,6 @@ const SeasonEpisodeSelector = ({
     const episode = parseInt(value);
     console.log(`Episode selected: ${episode}`);
     onEpisodeChange(episode);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  // Generate pagination items
-  const getPaginationItems = () => {
-    const items = [];
-    
-    // Always show first page
-    items.push(
-      <PaginationItem key="first">
-        <PaginationLink 
-          isActive={currentPage === 1} 
-          onClick={() => handlePageChange(1)}
-        >
-          1
-        </PaginationLink>
-      </PaginationItem>
-    );
-
-    // Add ellipsis if needed
-    if (currentPage > 3) {
-      items.push(
-        <PaginationItem key="ellipsis-1">
-          <PaginationEllipsis />
-        </PaginationItem>
-      );
-    }
-
-    // Current page and neighbors
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-      if (i === 1 || i === totalPages) continue; // Skip first and last pages as they're always shown
-      items.push(
-        <PaginationItem key={i}>
-          <PaginationLink
-            isActive={currentPage === i}
-            onClick={() => handlePageChange(i)}
-          >
-            {i}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    // Add ellipsis if needed
-    if (currentPage < totalPages - 2) {
-      items.push(
-        <PaginationItem key="ellipsis-2">
-          <PaginationEllipsis />
-        </PaginationItem>
-      );
-    }
-
-    // Always show last page if there are more than 1 page
-    if (totalPages > 1) {
-      items.push(
-        <PaginationItem key="last">
-          <PaginationLink
-            isActive={currentPage === totalPages}
-            onClick={() => handlePageChange(totalPages)}
-          >
-            {totalPages}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    return items;
   };
 
   if (loading && seasons.length === 0) {
@@ -348,31 +248,6 @@ const SeasonEpisodeSelector = ({
           </div>
         )}
       </div>
-
-      {/* Show pagination only if there are multiple pages */}
-      {episodes.length > episodesPerPage && (
-        <div className="w-full flex justify-center">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))} 
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-              
-              {getPaginationItems()}
-              
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))} 
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
     </div>
   );
 };
