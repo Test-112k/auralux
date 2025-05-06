@@ -34,6 +34,12 @@ const ContentViewer = ({
   handleContentSelection
 }: ContentViewerProps) => {
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const episodesPerPage = 20;
+
+  // Calculate which episodes to display based on current page
+  const startIndex = (currentPage - 1) * episodesPerPage;
+  const displayedEpisodes = episodes.slice(startIndex, startIndex + episodesPerPage);
 
   // Ensure scrolling to top when content changes
   useEffect(() => {
@@ -47,6 +53,14 @@ const ContentViewer = ({
     }
   }, [selectedContent?.id]);
 
+  // Update current page when episode changes
+  useEffect(() => {
+    const newPage = Math.ceil(selectedEpisode / episodesPerPage);
+    if (newPage !== currentPage) {
+      setCurrentPage(newPage);
+    }
+  }, [selectedEpisode]);
+
   // Handle season change
   const handleSeasonChange = (seasonNumber: number) => {
     console.log(`Season changed to ${seasonNumber}`);
@@ -57,6 +71,20 @@ const ContentViewer = ({
   const handleEpisodeChange = (episodeNumber: number) => {
     console.log(`Episode changed to ${episodeNumber}`);
     setSelectedEpisode(episodeNumber);
+  };
+
+  // Handle navigation to previous episode
+  const handlePrevEpisode = () => {
+    if (selectedEpisode > 1) {
+      setSelectedEpisode(selectedEpisode - 1);
+    }
+  };
+
+  // Handle navigation to next episode
+  const handleNextEpisode = () => {
+    if (selectedEpisode < episodes.length) {
+      setSelectedEpisode(selectedEpisode + 1);
+    }
   };
 
   return (
@@ -108,10 +136,7 @@ const ContentViewer = ({
             <>
               <div className="flex items-center justify-between gap-4">
                 <button
-                  onClick={() => {
-                    const newEpisode = Math.max(1, selectedEpisode - 1);
-                    setSelectedEpisode(newEpisode);
-                  }}
+                  onClick={handlePrevEpisode}
                   disabled={selectedEpisode <= 1 || loading}
                   className={`px-4 py-2 rounded text-sm ${
                     selectedEpisode <= 1 || loading
@@ -122,10 +147,7 @@ const ContentViewer = ({
                   Previous Episode
                 </button>
                 <button
-                  onClick={() => {
-                    const newEpisode = selectedEpisode + 1;
-                    setSelectedEpisode(newEpisode);
-                  }}
+                  onClick={handleNextEpisode}
                   disabled={selectedEpisode >= episodes.length || loading}
                   className={`px-4 py-2 rounded text-sm ${
                     selectedEpisode >= episodes.length || loading
@@ -141,7 +163,7 @@ const ContentViewer = ({
                 <h3 className="text-xl font-bold mb-4">Episodes</h3>
                 <ScrollArea className="h-[500px] pr-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {episodes.map((episode) => (
+                    {displayedEpisodes.map((episode) => (
                       <div
                         key={`episode-${episode.episode_number}`}
                         className={`p-4 rounded-lg cursor-pointer transition-all ${
