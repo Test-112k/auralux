@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SeasonEpisodeSelector from './SeasonEpisodeSelector';
@@ -35,7 +35,8 @@ const ContentViewer = ({
   handleContentSelection
 }: ContentViewerProps) => {
   const contentRef = React.useRef<HTMLDivElement>(null);
-  const [currentPage, setCurrentPage] = React.useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isSwitchingSeason, setIsSwitchingSeason] = useState(false);
   const episodesPerPage = 20;
 
   // Calculate which episodes to display based on current page
@@ -56,18 +57,24 @@ const ContentViewer = ({
 
   // Update current page when episode changes
   useEffect(() => {
-    if (episodes.length > 0) {
+    if (episodes.length > 0 && !isSwitchingSeason) {
       const newPage = Math.ceil(selectedEpisode / episodesPerPage);
       setCurrentPage(newPage);
     }
-  }, [selectedEpisode, episodes.length]);
+  }, [selectedEpisode, episodes.length, isSwitchingSeason]);
 
   // Handle season change
   const handleSeasonChange = (seasonNumber: number) => {
     console.log(`Season changed to ${seasonNumber}`);
+    setIsSwitchingSeason(true);
     setSelectedSeason(seasonNumber);
     // Reset to episode 1 when changing seasons to ensure proper API integration
     setSelectedEpisode(1);
+    
+    // Reset the switching flag after a delay to prevent page calculation issues
+    setTimeout(() => {
+      setIsSwitchingSeason(false);
+    }, 500);
   };
 
   // Handle episode change
@@ -117,6 +124,7 @@ const ContentViewer = ({
               <Select
                 value={selectedServer}
                 onValueChange={(value) => setSelectedServer(value)}
+                disabled={loading}
               >
                 <SelectTrigger className="w-[180px] bg-[#232323]">
                   <SelectValue placeholder="Select Server" />

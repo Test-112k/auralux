@@ -35,6 +35,7 @@ const SeasonEpisodeSelector = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [fetchingEpisodes, setFetchingEpisodes] = useState<boolean>(false);
   
   // Pagination for episodes
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -47,10 +48,11 @@ const SeasonEpisodeSelector = ({
     currentPage * episodesPerPage
   );
 
+  // Fetch TV details when contentId changes
   useEffect(() => {
+    if (!contentId) return;
+    
     const fetchTVDetails = async () => {
-      if (!contentId) return;
-      
       try {
         setLoading(true);
         setError(null);
@@ -77,14 +79,14 @@ const SeasonEpisodeSelector = ({
           let seasonToFetch = selectedSeason;
           if (!selectedSeason || !validSeasons.some(s => s.season_number === selectedSeason)) {
             seasonToFetch = validSeasons[0].season_number;
-          }
-          
-          await fetchSeasonEpisodes(contentId, seasonToFetch);
-          
-          // Only update season if it's different to avoid loops
-          if (seasonToFetch !== selectedSeason) {
+            // Update parent component with the new season
             onSeasonChange(seasonToFetch);
+          } else {
+            // If the season is valid, fetch episodes for it
+            await fetchSeasonEpisodes(contentId, seasonToFetch);
           }
+        } else {
+          setEpisodes([]);
         }
       } catch (error) {
         console.error("Error fetching TV details:", error);
@@ -102,26 +104,30 @@ const SeasonEpisodeSelector = ({
     fetchTVDetails();
   }, [contentId]);
 
+  // Fetch episodes when selectedSeason changes
   useEffect(() => {
-    if (contentId && selectedSeason > 0) {
-      fetchSeasonEpisodes(contentId, selectedSeason);
-      // Reset to page 1 when changing seasons
-      setCurrentPage(1);
+    if (contentId && selectedSeason > 0 && seasons.length > 0) {
+      // Only fetch if the selected season exists in our seasons list
+      if (seasons.some(s => s.season_number === selectedSeason)) {
+        fetchSeasonEpisodes(contentId, selectedSeason);
+      }
     }
-  }, [contentId, selectedSeason]);
+  }, [contentId, selectedSeason, seasons]);
 
   // Determine which page contains the selected episode
   useEffect(() => {
     if (episodes.length > 0) {
       const pageForSelectedEpisode = Math.ceil(selectedEpisode / episodesPerPage);
-      setCurrentPage(pageForSelectedEpisode);
+      if (pageForSelectedEpisode !== currentPage) {
+        setCurrentPage(pageForSelectedEpisode);
+      }
     }
   }, [selectedEpisode, episodes.length]);
 
   const fetchSeasonEpisodes = async (id: number, seasonNumber: number) => {
     try {
       console.log(`Fetching episodes for season ${seasonNumber}`);
-      setLoading(true);
+      setFetchingEpisodes(true);
       setError(null);
       
       const response = await fetch(
@@ -155,14 +161,17 @@ const SeasonEpisodeSelector = ({
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setFetchingEpisodes(false);
     }
   };
 
   const handleSeasonChange = (value: string) => {
     const season = parseInt(value);
     console.log(`Season selected: ${season}`);
-    onSeasonChange(season);
+    if (season !== selectedSeason) {
+      // Reset episode selection to prevent invalid episodes
+      onSeasonChange(season);
+    }
   };
 
   const handleEpisodeChange = (value: string) => {
@@ -262,7 +271,7 @@ const SeasonEpisodeSelector = ({
             <Select
               value={selectedSeason.toString()}
               onValueChange={handleSeasonChange}
-              disabled={loading}
+              disabled={loading || fetchingEpisodes}
             >
               <SelectTrigger className="w-[180px] bg-[#232323]">
                 <SelectValue placeholder="Select Season" />
@@ -277,7 +286,7 @@ const SeasonEpisodeSelector = ({
                 </ScrollArea>
               </SelectContent>
             </Select>
-            {loading && seasons.length > 0 && (
+            {(loading || fetchingEpisodes) && (
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                 <Loader2 className="h-4 w-4 animate-spin" />
               </div>
@@ -286,23 +295,31 @@ const SeasonEpisodeSelector = ({
         )}
 
         {episodes.length > 0 && (
-          <Select
-            value={selectedEpisode.toString()}
-            onValueChange={handleEpisodeChange}
-          >
-            <SelectTrigger className="w-[180px] bg-[#232323]">
-              <SelectValue placeholder="Select Episode" />
-            </SelectTrigger>
-            <SelectContent>
-              <ScrollArea className="h-[200px]">
-                {episodes.map((episode) => (
-                  <SelectItem key={episode.episode_number} value={episode.episode_number.toString()}>
-                    Episode {episode.episode_number}
-                  </SelectItem>
-                ))}
-              </ScrollArea>
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Select
+              value={selectedEpisode.toString()}
+              onValueChange={handleEpisodeChange}
+              disabled={fetchingEpisodes}
+            >
+              <SelectTrigger className="w-[180px] bg-[#232323]">
+                <SelectValue placeholder="Select Episode" />
+              </SelectTrigger>
+              <SelectContent>
+                <ScrollArea className="h-[200px]">
+                  {episodes.map((episode) => (
+                    <SelectItem key={episode.episode_number} value={episode.episode_number.toString()}>
+                      Episode {episode.episode_number}
+                    </SelectItem>
+                  ))}
+                </ScrollArea>
+              </SelectContent>
+            </Select>
+            {fetchingEpisodes && (
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            )}
+          </div>
         )}
       </div>
 
