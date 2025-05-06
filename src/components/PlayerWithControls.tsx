@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, PlayCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 interface PlayerWithControlsProps {
@@ -9,62 +9,92 @@ interface PlayerWithControlsProps {
   loading: boolean;
 }
 
+interface SavedPlayerState {
+  src: string;
+  title: string;
+  timestamp: number;
+  season?: number;
+  episode?: number;
+}
+
 const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [key, setKey] = useState(Date.now()); // Add key to force iframe refresh
   const { toast } = useToast();
+  const [hasSavedState, setHasSavedState] = useState(false);
   
   // Get storage key for the current video
   const getStorageKey = () => `player_state_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
   
-  // Restore player state when the component mounts
+  // Check for saved state on mount
   useEffect(() => {
     try {
-      // Register a beforeunload event to save player state when page is unloaded
-      window.addEventListener('beforeunload', savePlayerState);
+      const savedStateString = localStorage.getItem(getStorageKey());
+      if (savedStateString) {
+        const savedState: SavedPlayerState = JSON.parse(savedStateString);
+        const timeSinceLastWatch = Date.now() - savedState.timestamp;
+        const isRecent = timeSinceLastWatch < 7 * 24 * 60 * 60 * 1000; // 7 days
+        
+        if (isRecent) {
+          setHasSavedState(true);
+        }
+      }
       
+      // Register beforeunload event to save state when navigating away
+      window.addEventListener('beforeunload', savePlayerState);
       return () => {
         window.removeEventListener('beforeunload', savePlayerState);
       };
     } catch (error) {
-      console.error("Error setting up player resume:", error);
+      console.error("Error checking saved player state:", error);
     }
   }, []);
 
-  // When source changes, restore from saved state if exists
+  // When source changes, update loading state
   useEffect(() => {
     setIsLoading(true);
     setError(false);
     setKey(Date.now()); // Force iframe refresh when src changes
     
-    // Try to restore previous state for this video
+    // Check for saved state for this content
     try {
-      const savedState = localStorage.getItem(getStorageKey());
-      if (savedState) {
-        console.log("Resuming previous session", savedState);
-        // We'll rely on the iframe load event to handle restoration
+      const savedStateString = localStorage.getItem(getStorageKey());
+      if (savedStateString) {
+        const savedState: SavedPlayerState = JSON.parse(savedStateString);
+        const isSameContent = savedState.src === src;
+        const timeSinceLastWatch = Date.now() - savedState.timestamp;
+        const isRecent = timeSinceLastWatch < 7 * 24 * 60 * 60 * 1000; // 7 days
+        
+        setHasSavedState(isSameContent && isRecent);
+      } else {
+        setHasSavedState(false);
       }
     } catch (error) {
       console.error("Error restoring player state:", error);
     }
   }, [src]);
 
-  // Save player position into localStorage
+  // Save player state to localStorage
   const savePlayerState = () => {
-    if (!src) return; // Don't save if there's no source
+    if (!src) return;
     
     try {
-      // Only save state if iframe is loaded and no error
-      if (!isLoading && !error) {
-        const playerState = {
-          src,
-          title,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem(getStorageKey(), JSON.stringify(playerState));
-        console.log("Player state saved", playerState);
+      const playerState: SavedPlayerState = {
+        src,
+        title,
+        timestamp: Date.now(),
+      };
+      
+      // Extract season and episode from src if it's a TV show
+      const tvMatch = src.match(/\/tv\/(\d+)\/(\d+)-(\d+)$/);
+      if (tvMatch) {
+        playerState.season = parseInt(tvMatch[2]);
+        playerState.episode = parseInt(tvMatch[3]);
       }
+      
+      localStorage.setItem(getStorageKey(), JSON.stringify(playerState));
+      console.log("Player state saved", playerState);
     } catch (error) {
       console.error("Error saving player state:", error);
     }
@@ -74,38 +104,30 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
     setIsLoading(false);
     setError(false);
     
-    try {
-      // Check for saved state when iframe loads
-      const savedState = localStorage.getItem(getStorageKey());
-      if (savedState) {
-        const parsedState = JSON.parse(savedState);
-        if (parsedState.src === src) {
-          // Only show toast if there's a saved state for this exact video
-          toast({
-            title: "Video Resumed",
-            description: "Your last viewing position has been restored",
-            duration: 3000,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error handling iframe load:", error);
+    // When iframe loads successfully, show toast if there's a saved state
+    if (hasSavedState) {
+      toast({
+        title: "Continue Watching",
+        description: "Resuming from where you left off",
+        duration: 3000,
+      });
     }
+    
+    // Set up interval to periodically save player state
+    const saveInterval = setInterval(savePlayerState, 30000); // Save every 30 seconds
+    return () => clearInterval(saveInterval);
   };
 
   const handleError = () => {
     setError(true);
     setIsLoading(false);
-    
-    // Save state when error occurs to help with recovery
-    savePlayerState();
   };
 
   const refreshPlayer = () => {
     setIsLoading(true);
     setError(false);
     setKey(Date.now()); // Force iframe refresh
-    savePlayerState(); // Save state before refreshing
+    savePlayerState();
   };
 
   return (
@@ -129,6 +151,13 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
               Retry
             </button>
           </div>
+        </div>
+      )}
+      
+      {hasSavedState && !isLoading && !error && (
+        <div className="absolute top-2 left-2 z-20 bg-purple-600 bg-opacity-90 rounded-md px-3 py-1 text-sm flex items-center">
+          <PlayCircle size={16} className="mr-1" />
+          Continuing where you left off
         </div>
       )}
       

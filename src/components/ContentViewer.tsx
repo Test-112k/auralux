@@ -35,13 +35,6 @@ const ContentViewer = ({
   handleContentSelection
 }: ContentViewerProps) => {
   const contentRef = React.useRef<HTMLDivElement>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isSwitchingSeason, setIsSwitchingSeason] = useState(false);
-  const episodesPerPage = 20;
-
-  // Calculate which episodes to display based on current page
-  const startIndex = (currentPage - 1) * episodesPerPage;
-  const displayedEpisodes = episodes.slice(startIndex, startIndex + episodesPerPage);
 
   // Ensure scrolling to top when content changes
   useEffect(() => {
@@ -55,26 +48,10 @@ const ContentViewer = ({
     }
   }, [selectedContent?.id]);
 
-  // Update current page when episode changes
-  useEffect(() => {
-    if (episodes.length > 0 && !isSwitchingSeason) {
-      const newPage = Math.ceil(selectedEpisode / episodesPerPage);
-      setCurrentPage(newPage);
-    }
-  }, [selectedEpisode, episodes.length, isSwitchingSeason]);
-
   // Handle season change
   const handleSeasonChange = (seasonNumber: number) => {
     console.log(`Season changed to ${seasonNumber}`);
-    setIsSwitchingSeason(true);
     setSelectedSeason(seasonNumber);
-    // Reset to episode 1 when changing seasons to ensure proper API integration
-    setSelectedEpisode(1);
-    
-    // Reset the switching flag after a delay to prevent page calculation issues
-    setTimeout(() => {
-      setIsSwitchingSeason(false);
-    }, 500);
   };
 
   // Handle episode change
@@ -101,13 +78,11 @@ const ContentViewer = ({
         >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
-            width="24" 
-            height="24" 
             viewBox="0 0 24 24" 
             fill="currentColor"
             className="w-6 h-6"
           >
-            <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.95 8.12-1.56 7.34c-.12.52-.67.79-1.12.53l-3.16-2.24-1.63 1.6c-.1.1-.35.24-.46.24-.17 0-.14-.13-.2-.47l-.45-3.25-2.77-1.23a.76.76 0 0 1 .05-1.44l11.09-4.18c.4-.14.82.22.7.63l.51 2.47z" />
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0h-.056zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
           </svg>
         </a>
       </div>
@@ -158,7 +133,7 @@ const ContentViewer = ({
                 <h3 className="text-xl font-bold mb-4">Episodes</h3>
                 <ScrollArea className="h-[500px] pr-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {displayedEpisodes.map((episode) => (
+                    {episodes.map((episode) => (
                       <div
                         key={`episode-${episode.episode_number}`}
                         className={`p-4 rounded-lg cursor-pointer transition-all ${

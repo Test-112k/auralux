@@ -37,7 +37,7 @@ const SeasonEpisodeSelector = ({
         setLoading(true);
         setError(null);
         const response = await fetch(
-          `${TMDB_API_BASE}/tv/${contentId}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=external_ids`
+          `${TMDB_API_BASE}/tv/${contentId}?api_key=${TMDB_API_KEY}&language=en-US`
         );
         
         if (!response.ok) {
@@ -54,7 +54,7 @@ const SeasonEpisodeSelector = ({
 
         setSeasons(validSeasons);
 
-        // Wait for seasons to be set before fetching episodes
+        // If we have seasons, fetch the first season's episodes or currently selected season
         if (validSeasons.length > 0) {
           // Check if the current selectedSeason is valid
           const seasonExists = validSeasons.some(s => s.season_number === selectedSeason);
@@ -66,12 +66,13 @@ const SeasonEpisodeSelector = ({
           if (seasonToFetch !== selectedSeason) {
             console.log(`Selected season ${selectedSeason} not found, using season ${seasonToFetch} instead`);
             onSeasonChange(seasonToFetch);
-          } else {
-            // If using the same season, still need to fetch episodes
-            await fetchSeasonEpisodes(contentId, seasonToFetch);
-          }
+          } 
+          
+          // Always fetch episodes for the current season
+          await fetchSeasonEpisodes(contentId, seasonToFetch);
         } else {
           setEpisodes([]);
+          setLoading(false);
         }
       } catch (error) {
         console.error("Error fetching TV details:", error);
@@ -81,26 +82,12 @@ const SeasonEpisodeSelector = ({
           description: "Please try again later",
           variant: "destructive",
         });
-      } finally {
         setLoading(false);
       }
     };
 
     fetchTVDetails();
   }, [contentId]);
-
-  // Fetch episodes when selectedSeason changes
-  useEffect(() => {
-    if (contentId && selectedSeason > 0 && seasons.length > 0) {
-      // Verify the season exists in our seasons list
-      const seasonExists = seasons.some(s => s.season_number === selectedSeason);
-      if (seasonExists) {
-        fetchSeasonEpisodes(contentId, selectedSeason);
-      } else {
-        console.log(`Warning: Attempted to fetch invalid season ${selectedSeason}`);
-      }
-    }
-  }, [contentId, selectedSeason, seasons]);
 
   const fetchSeasonEpisodes = async (id: number, seasonNumber: number) => {
     try {
@@ -142,15 +129,21 @@ const SeasonEpisodeSelector = ({
       });
     } finally {
       setFetchingEpisodes(false);
+      setLoading(false);
     }
   };
 
+  // Handle season change with explicit episode fetching
   const handleSeasonChange = (value: string) => {
     const season = parseInt(value);
     console.log(`Season selected: ${season}`);
-    if (season !== selectedSeason) {
-      // Reset episode selection to prevent invalid episodes
-      onSeasonChange(season);
+    
+    // Update season in parent component
+    onSeasonChange(season);
+    
+    // Explicitly fetch episodes for the new season
+    if (contentId && season > 0) {
+      fetchSeasonEpisodes(contentId, season);
     }
   };
 
@@ -181,11 +174,11 @@ const SeasonEpisodeSelector = ({
             <Select
               value={selectedSeason.toString()}
               onValueChange={handleSeasonChange}
-              disabled={loading || fetchingEpisodes}
+              disabled={loading}
             >
               <SelectTrigger className="w-[180px] bg-[#232323]">
                 <SelectValue placeholder="Select Season">
-                  {loading || fetchingEpisodes ? (
+                  {loading ? (
                     <div className="flex items-center gap-2">
                       <span>Loading...</span>
                     </div>
@@ -204,7 +197,7 @@ const SeasonEpisodeSelector = ({
                 </ScrollArea>
               </SelectContent>
             </Select>
-            {(loading || fetchingEpisodes) && (
+            {loading && (
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                 <Loader2 className="h-4 w-4 animate-spin" />
               </div>
@@ -234,7 +227,7 @@ const SeasonEpisodeSelector = ({
                 <ScrollArea className="h-[200px]">
                   {episodes.map((episode) => (
                     <SelectItem key={episode.episode_number} value={episode.episode_number.toString()}>
-                      Episode {episode.episode_number}
+                      Episode {episode.episode_number}: {episode.name}
                     </SelectItem>
                   ))}
                 </ScrollArea>
