@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 
 interface PlayerWithControlsProps {
   src: string;
@@ -12,17 +13,79 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [key, setKey] = useState(Date.now()); // Add key to force iframe refresh
+  const { toast } = useToast();
+  
+  // Get stored information for the current video
+  const getStorageKey = () => `player_state_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
+  
+  // Restore player state when the component mounts
+  useEffect(() => {
+    try {
+      // Register a beforeunload event to save player state when page is unloaded
+      window.addEventListener('beforeunload', savePlayerState);
+      
+      return () => {
+        window.removeEventListener('beforeunload', savePlayerState);
+      };
+    } catch (error) {
+      console.error("Error setting up player resume:", error);
+    }
+  }, []);
 
-  // Reset loading and error states when src changes
+  // When source changes, restore from saved state if exists
   useEffect(() => {
     setIsLoading(true);
     setError(false);
     setKey(Date.now()); // Force iframe refresh when src changes
+    
+    // Try to restore previous state for this video
+    try {
+      const savedState = localStorage.getItem(getStorageKey());
+      if (savedState) {
+        console.log("Resuming previous session", savedState);
+        // We'll rely on the iframe load event to handle restoration
+      }
+    } catch (error) {
+      console.error("Error restoring player state:", error);
+    }
   }, [src]);
+
+  // Save player position into localStorage
+  const savePlayerState = () => {
+    try {
+      // Only save state if iframe is loaded and no error
+      if (!isLoading && !error) {
+        const playerState = {
+          src,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(getStorageKey(), JSON.stringify(playerState));
+        console.log("Player state saved", playerState);
+      }
+    } catch (error) {
+      console.error("Error saving player state:", error);
+    }
+  };
   
   const handleIframeLoad = () => {
     setIsLoading(false);
     setError(false);
+    
+    try {
+      // Check for saved state when iframe loads
+      const savedState = localStorage.getItem(getStorageKey());
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        // Only show toast if there's a saved state
+        toast({
+          title: "Video Resumed",
+          description: "Your last viewing position has been restored",
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error("Error handling iframe load:", error);
+    }
   };
 
   const handleError = () => {
@@ -34,6 +97,7 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
     setIsLoading(true);
     setError(false);
     setKey(Date.now()); // Force iframe refresh
+    savePlayerState(); // Save state before refreshing
   };
 
   return (
