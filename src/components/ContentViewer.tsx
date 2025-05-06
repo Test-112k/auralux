@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import SeasonEpisodeSelector from './SeasonEpisodeSelector';
 import PlayerWithControls from './PlayerWithControls';
 import RelatedTitles from './RelatedTitles';
@@ -107,9 +108,10 @@ const ContentViewer = ({
             <>
               <div className="flex items-center justify-between gap-4">
                 <button
-                  onClick={() =>
-                    setSelectedEpisode((prev) => Math.max(1, prev - 1))
-                  }
+                  onClick={() => {
+                    const newEpisode = Math.max(1, selectedEpisode - 1);
+                    setSelectedEpisode(newEpisode);
+                  }}
                   disabled={selectedEpisode <= 1 || loading}
                   className={`px-4 py-2 rounded text-sm ${
                     selectedEpisode <= 1 || loading
@@ -120,7 +122,10 @@ const ContentViewer = ({
                   Previous Episode
                 </button>
                 <button
-                  onClick={() => setSelectedEpisode((prev) => prev + 1)}
+                  onClick={() => {
+                    const newEpisode = selectedEpisode + 1;
+                    setSelectedEpisode(newEpisode);
+                  }}
                   disabled={selectedEpisode >= episodes.length || loading}
                   className={`px-4 py-2 rounded text-sm ${
                     selectedEpisode >= episodes.length || loading
