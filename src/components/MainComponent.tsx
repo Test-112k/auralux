@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -840,4 +841,94 @@ function MainComponent() {
             </div>
 
             <section className="mb-10">
-              <h2 className="text-2xl font-bold mb-6 text-
+              <h2 className="text-2xl font-bold mb-6 text-white">Trending</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {currentContent.trending.map((item) => (
+                  <div
+                    key={`trending-${item.id}`}
+                    className="bg-[#161616] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg"
+                    onClick={() => handleContentSelection(item)}
+                  >
+                    {item.poster_path ? (
+                      <img
+                        src={item.poster_path}
+                        alt={item.title}
+                        className="w-full aspect-[2/3] object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full aspect-[2/3] bg-gray-800 flex items-center justify-center">
+                        <span className="text-sm text-gray-500">No Image</span>
+                      </div>
+                    )}
+                    <div className="p-2">
+                      <h3 className="font-medium text-sm truncate">{item.title}</h3>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
+                        <span className="text-xs bg-purple-500 px-2 py-0.5 rounded-sm">
+                          {item.score?.toFixed(1) || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="mb-10">
+              <h2 className="text-2xl font-bold mb-6 text-white">Popular</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {currentContent.popular.map((item, index) => (
+                  <div
+                    key={`popular-${item.id}`}
+                    ref={index === currentContent.popular.length - 5 ? lastElementRef : null}
+                    className="bg-[#161616] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg"
+                    onClick={() => handleContentSelection(item)}
+                  >
+                    {item.poster_path ? (
+                      <img
+                        src={item.poster_path}
+                        alt={item.title}
+                        className="w-full aspect-[2/3] object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full aspect-[2/3] bg-gray-800 flex items-center justify-center">
+                        <span className="text-sm text-gray-500">No Image</span>
+                      </div>
+                    )}
+                    <div className="p-2">
+                      <h3 className="font-medium text-sm truncate">{item.title}</h3>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
+                        <span className="text-xs bg-purple-500 px-2 py-0.5 rounded-sm">
+                          {item.score?.toFixed(1) || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {loadingMore && (
+                <div className="flex justify-center mt-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </main>
+
+      {/* Back to top button */}
+      <button
+        onClick={scrollToTop}
+        className="fixed bottom-8 right-8 bg-purple-500 p-2 rounded-full shadow-lg hover:bg-purple-600 transition-colors z-40"
+      >
+        <ArrowUp className="h-6 w-6" />
+      </button>
+    </div>
+  );
+}
+
+export default MainComponent;
