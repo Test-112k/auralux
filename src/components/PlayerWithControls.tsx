@@ -159,7 +159,7 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
         )}
         
         {hasSavedState && !isLoading && !error && (
-          <div className="absolute top-2 left-2 z-20 bg-purple-600 bg-opacity-90 rounded-md px-3 py-1 text-sm flex items-center">
+          <div className="absolute top-2 left-2 z-20 bg-purple-600 bg-opacity-90 rounded-md px-3 py-1 text-sm flex items-center animate-fade-in">
             <PlayCircle size={16} className="mr-1" />
             Continuing where you left off
           </div>
@@ -181,10 +181,10 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
         ></iframe>
       </div>
       
-      {/* Enhanced message below the video player */}
-      <Alert className="bg-[#1A1F2C] border-purple-700 shadow-lg">
+      {/* Enhanced message below the video player with updated text */}
+      <Alert className="bg-[#1A1F2C] border-purple-700 shadow-lg animate-fade-in">
         <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
-          <span className="text-white font-medium">If you are unable to watch here or want to download it, then visit our telegram channel or website.</span>
+          <span className="text-white font-medium">If you are unable to watch here, want English Or Dub Version, or Want to download it, then visit our telegram channel or website.</span>
           <div className="flex flex-wrap gap-2">
             <Button 
               variant="outline" 

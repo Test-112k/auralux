@@ -3,7 +3,7 @@ import React from 'react';
 
 const AnnouncementSection = () => {
   return (
-    <div className="bg-gradient-to-r from-purple-900 to-purple-700 rounded-lg shadow-md p-4">
+    <div className="bg-gradient-to-r from-purple-900 to-purple-700 rounded-lg shadow-md p-4 animate-fade-in">
       <div className="text-center">
         <h3 className="text-xl font-bold text-white mb-2">
           Watch Hindi-English Dubbed titles, Visit our website or Telegram channel. Facing issues? Report to us right away
@@ -13,7 +13,7 @@ const AnnouncementSection = () => {
             href="https://t.me/auralux1"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-[#0088cc] hover:bg-[#0099dd] text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2"
+            className="bg-[#0088cc] hover:bg-[#0099dd] text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2 hover-scale"
           >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -28,7 +28,7 @@ const AnnouncementSection = () => {
           </a>
           <a
             href="/"
-            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md transition-colors"
+            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md transition-colors hover-scale"
           >
             Visit Website
           </a>
