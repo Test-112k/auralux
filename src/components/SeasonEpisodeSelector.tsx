@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TMDB_API_KEY, TMDB_API_BASE } from '../lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,6 +14,16 @@ interface SeasonEpisodeSelectorProps {
   selectedEpisode: number;
 }
 
+interface Season {
+  season_number: number;
+  episode_count: number;
+}
+
+interface Episode {
+  episode_number: number;
+  name: string;
+}
+
 const SeasonEpisodeSelector = ({ 
   contentId, 
   onSeasonChange, 
@@ -21,23 +31,26 @@ const SeasonEpisodeSelector = ({
   selectedSeason,
   selectedEpisode
 }: SeasonEpisodeSelectorProps) => {
-  const [seasons, setSeasons] = useState<any[]>([]);
-  const [episodes, setEpisodes] = useState<any[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchingEpisodes, setFetchingEpisodes] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const [fetchingEpisodes, setFetchingEpisodes] = useState<boolean>(false);
-  
+
   // Fetch TV details when contentId changes
   useEffect(() => {
     if (!contentId) return;
+    
+    const controller = new AbortController();
     
     const fetchTVDetails = async () => {
       try {
         setLoading(true);
         setError(null);
         const response = await fetch(
-          `${TMDB_API_BASE}/tv/${contentId}?api_key=${TMDB_API_KEY}&language=en-US`
+          `${TMDB_API_BASE}/tv/${contentId}?api_key=${TMDB_API_KEY}&language=en-US`,
+          { signal: controller.signal }
         );
         
         if (!response.ok) {
@@ -74,22 +87,29 @@ const SeasonEpisodeSelector = ({
           setEpisodes([]);
           setLoading(false);
         }
-      } catch (error) {
-        console.error("Error fetching TV details:", error);
-        setError("Failed to load TV details");
-        toast({
-          title: "Error loading TV details",
-          description: "Please try again later",
-          variant: "destructive",
-        });
-        setLoading(false);
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error("Error fetching TV details:", error);
+          setError("Failed to load TV details");
+          toast({
+            title: "Error loading TV details",
+            description: "Please try again later",
+            variant: "destructive",
+          });
+          setLoading(false);
+        }
       }
     };
 
     fetchTVDetails();
+    
+    return () => {
+      controller.abort();
+    };
   }, [contentId]);
 
-  const fetchSeasonEpisodes = async (id: number, seasonNumber: number) => {
+  // Memoized fetchSeasonEpisodes to prevent unnecessary function recreation
+  const fetchSeasonEpisodes = useCallback(async (id: number, seasonNumber: number) => {
     try {
       console.log(`Fetching episodes for season ${seasonNumber}`);
       setFetchingEpisodes(true);
@@ -104,7 +124,6 @@ const SeasonEpisodeSelector = ({
       }
       
       const data = await response.json();
-      console.log("Season episodes:", data);
       
       if (data.episodes && data.episodes.length > 0) {
         setEpisodes(data.episodes);
@@ -131,7 +150,25 @@ const SeasonEpisodeSelector = ({
       setFetchingEpisodes(false);
       setLoading(false);
     }
-  };
+  }, [onEpisodeChange, selectedEpisode]);
+
+  // Memoize season items to prevent re-rendering
+  const seasonItems = useMemo(() => {
+    return seasons.map((season) => (
+      <SelectItem key={season.season_number} value={season.season_number.toString()}>
+        Season {season.season_number} ({season.episode_count} episodes)
+      </SelectItem>
+    ));
+  }, [seasons]);
+
+  // Memoize episode items to prevent re-rendering
+  const episodeItems = useMemo(() => {
+    return episodes.map((episode) => (
+      <SelectItem key={episode.episode_number} value={episode.episode_number.toString()}>
+        Episode {episode.episode_number}: {episode.name}
+      </SelectItem>
+    ));
+  }, [episodes]);
 
   // Handle season change with explicit episode fetching
   const handleSeasonChange = (value: string) => {
@@ -187,13 +224,9 @@ const SeasonEpisodeSelector = ({
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1A1A1A] border-[#333]">
                 <ScrollArea className="h-[200px]">
-                  {seasons.map((season) => (
-                    <SelectItem key={season.season_number} value={season.season_number.toString()}>
-                      Season {season.season_number} ({season.episode_count} episodes)
-                    </SelectItem>
-                  ))}
+                  {seasonItems}
                 </ScrollArea>
               </SelectContent>
             </Select>
@@ -223,13 +256,9 @@ const SeasonEpisodeSelector = ({
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1A1A1A] border-[#333]">
                 <ScrollArea className="h-[200px]">
-                  {episodes.map((episode) => (
-                    <SelectItem key={episode.episode_number} value={episode.episode_number.toString()}>
-                      Episode {episode.episode_number}: {episode.name}
-                    </SelectItem>
-                  ))}
+                  {episodeItems}
                 </ScrollArea>
               </SelectContent>
             </Select>

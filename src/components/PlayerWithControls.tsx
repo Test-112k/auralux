@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Loader2, RefreshCw, PlayCircle, ExternalLink } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -180,14 +181,14 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
         ></iframe>
       </div>
       
-      {/* New message below the video player */}
-      <Alert className="bg-gray-800 border-purple-700">
-        <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <span>If you are unable to watch here or want to download it, then visit our telegram channel or website.</span>
+      {/* Enhanced message below the video player */}
+      <Alert className="bg-[#1A1F2C] border-purple-700 shadow-lg">
+        <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
+          <span className="text-white font-medium">If you are unable to watch here or want to download it, then visit our telegram channel or website.</span>
           <div className="flex flex-wrap gap-2">
             <Button 
               variant="outline" 
-              className="bg-[#0088cc] hover:bg-[#0099dd] text-white border-none"
+              className="bg-[#0088cc] hover:bg-[#0099dd] text-white border-none hover:scale-105 transition-transform"
               asChild
             >
               <a 
@@ -210,7 +211,7 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
             </Button>
             <Button 
               variant="default" 
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-purple-600 hover:bg-purple-700 hover:scale-105 transition-transform"
               asChild
             >
               <a 
