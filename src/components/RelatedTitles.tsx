@@ -22,8 +22,15 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
       
       try {
         setLoading(true);
-        const endpoint = `${TMDB_API_BASE}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}&language=en-US&page=1`;
-        const response = await fetch(endpoint);
+        // Use 'recommendations' to get the most relevant and latest related content
+        // sorted by most recently released and popular
+        const endpoint = `${TMDB_API_BASE}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}&language=en-US&page=1&sort_by=release_date.desc`;
+        const response = await fetch(endpoint, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         
         if (!response.ok) {
           throw new Error("Failed to fetch related content");
@@ -31,7 +38,14 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
         
         const data = await response.json();
         
-        const formattedData = data.results.map((item: any) => ({
+        // Sort by most recent first (to ensure latest content appears first)
+        const sortedResults = data.results.sort((a: any, b: any) => {
+          const dateA = mediaType === "movie" ? a.release_date : a.first_air_date;
+          const dateB = mediaType === "movie" ? b.release_date : b.first_air_date;
+          return new Date(dateB || "2000-01-01").getTime() - new Date(dateA || "2000-01-01").getTime();
+        });
+        
+        const formattedData = sortedResults.map((item: any) => ({
           id: item.id,
           title: mediaType === "movie" ? item.title || "N/A" : item.name || "N/A",
           overview: item.overview,
@@ -78,8 +92,14 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
     try {
       setLoadingMore(true);
       const nextPage = page + 1;
-      const endpoint = `${TMDB_API_BASE}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}&language=en-US&page=${nextPage}`;
-      const response = await fetch(endpoint);
+      // Similar to initial fetch, but with the next page
+      const endpoint = `${TMDB_API_BASE}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}&language=en-US&page=${nextPage}&sort_by=release_date.desc`;
+      const response = await fetch(endpoint, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (!response.ok) {
         throw new Error("Failed to fetch more related content");
@@ -87,7 +107,14 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
       
       const data = await response.json();
       
-      const formattedData = data.results.map((item: any) => ({
+      // Sort by most recent first
+      const sortedResults = data.results.sort((a: any, b: any) => {
+        const dateA = mediaType === "movie" ? a.release_date : a.first_air_date;
+        const dateB = mediaType === "movie" ? b.release_date : b.first_air_date;
+        return new Date(dateB || "2000-01-01").getTime() - new Date(dateA || "2000-01-01").getTime();
+      });
+      
+      const formattedData = sortedResults.map((item: any) => ({
         id: item.id,
         title: mediaType === "movie" ? item.title || "N/A" : item.name || "N/A",
         overview: item.overview,
@@ -138,7 +165,7 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
         {relatedContent.map((item, index) => (
           <div
             key={`related-${item.id}-${index}`}
-            className="group cursor-pointer"
+            className="group cursor-pointer transform transition-transform duration-300 hover:scale-105"
             onClick={() => onSelectContent(item)}
             ref={index === relatedContent.length - 1 ? lastElementRef : null}
           >
@@ -147,7 +174,7 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
                 <img
                   src={item.poster_path}
                   alt={item.title}
-                  className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
                   loading="lazy"
                 />
               ) : (

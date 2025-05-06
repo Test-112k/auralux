@@ -104,7 +104,7 @@ const ContentViewer = ({
                 <SelectTrigger className="w-[180px] bg-[#232323]">
                   <SelectValue placeholder="Select Server" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-[#333]">
+                <SelectContent className="bg-[#1A1A1A] border-[#333] z-50">
                   <SelectItem value="vidsrc">Server 1</SelectItem>
                 </SelectContent>
               </Select>
@@ -125,6 +125,43 @@ const ContentViewer = ({
               title={selectedContent.title} 
               loading={loading} 
             />
+
+            {/* Alternative Viewing Options Alert */}
+            <div className="mt-4 bg-[#1E1E1E] border border-purple-800 rounded-lg p-4 animate-fade-in">
+              <p className="text-center text-white mb-3">
+                If you are unable to watch here, want English Or Dub Version, or Want to download it, then visit our telegram channel or website
+              </p>
+              <div className="flex justify-center space-x-4">
+                <a
+                  href="https://t.me/auralux1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#0088cc] hover:bg-[#0099dd] text-white px-4 py-2 rounded-md transition-all duration-300 flex items-center gap-2 transform hover:scale-105"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 24 24" 
+                    fill="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0h-.056zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                  </svg>
+                  Telegram
+                </a>
+                <a
+                  href="https://auralux.watch"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded-md transition-all duration-300 flex items-center gap-2 transform hover:scale-105"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
+                  Website
+                </a>
+              </div>
+            </div>
           </div>
 
           {selectedContent.media_type === "tv" && episodes.length > 0 && (
