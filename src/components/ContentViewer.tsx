@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import SeasonEpisodeSelector from './SeasonEpisodeSelector';
 import PlayerWithControls from './PlayerWithControls';
 import RelatedTitles from './RelatedTitles';
+import { Telegram } from 'lucide-react';
 
 interface ContentViewerProps {
   selectedContent: any;
@@ -55,16 +56,18 @@ const ContentViewer = ({
 
   // Update current page when episode changes
   useEffect(() => {
-    const newPage = Math.ceil(selectedEpisode / episodesPerPage);
-    if (newPage !== currentPage) {
+    if (episodes.length > 0) {
+      const newPage = Math.ceil(selectedEpisode / episodesPerPage);
       setCurrentPage(newPage);
     }
-  }, [selectedEpisode]);
+  }, [selectedEpisode, episodes.length]);
 
   // Handle season change
   const handleSeasonChange = (seasonNumber: number) => {
     console.log(`Season changed to ${seasonNumber}`);
     setSelectedSeason(seasonNumber);
+    // Reset to episode 1 when changing seasons to ensure proper API integration
+    setSelectedEpisode(1);
   };
 
   // Handle episode change
@@ -89,11 +92,22 @@ const ContentViewer = ({
 
   return (
     <div className="mt-4" ref={contentRef} id="content-top">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">{selectedContent.title}</h1>
-        {selectedContent.original_title !== selectedContent.title && (
-          <h2 className="text-lg text-gray-400">{selectedContent.original_title}</h2>
-        )}
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">{selectedContent.title}</h1>
+          {selectedContent.original_title !== selectedContent.title && (
+            <h2 className="text-lg text-gray-400">{selectedContent.original_title}</h2>
+          )}
+        </div>
+        <a 
+          href="https://t.me/auralux1" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-purple-500 hover:text-purple-400 transition-colors"
+          title="Join our Telegram channel"
+        >
+          <Telegram size={24} />
+        </a>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
@@ -108,9 +122,7 @@ const ContentViewer = ({
                   <SelectValue placeholder="Select Server" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="vidsrc">VidSrc</SelectItem>
-                  <SelectItem value="vidapi">VidAPI</SelectItem>
-                  <SelectItem value="streamable">Streamable</SelectItem>
+                  <SelectItem value="vidsrc">Server 1</SelectItem>
                 </SelectContent>
               </Select>
 

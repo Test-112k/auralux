@@ -4,7 +4,7 @@ import { TMDB_API_KEY, TMDB_API_BASE } from '../lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Pagination,
   PaginationContent,
@@ -53,6 +53,7 @@ const SeasonEpisodeSelector = ({
       
       try {
         setLoading(true);
+        setError(null);
         const response = await fetch(
           `${TMDB_API_BASE}/tv/${contentId}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=external_ids`
         );
@@ -72,9 +73,18 @@ const SeasonEpisodeSelector = ({
         setSeasons(validSeasons);
 
         if (validSeasons.length > 0) {
-          const seasonToFetch = selectedSeason || validSeasons[0].season_number;
+          // Use selectedSeason if it's valid, otherwise use the first valid season
+          let seasonToFetch = selectedSeason;
+          if (!selectedSeason || !validSeasons.some(s => s.season_number === selectedSeason)) {
+            seasonToFetch = validSeasons[0].season_number;
+          }
+          
           await fetchSeasonEpisodes(contentId, seasonToFetch);
-          onSeasonChange(seasonToFetch);
+          
+          // Only update season if it's different to avoid loops
+          if (seasonToFetch !== selectedSeason) {
+            onSeasonChange(seasonToFetch);
+          }
         }
       } catch (error) {
         console.error("Error fetching TV details:", error);
@@ -104,9 +114,7 @@ const SeasonEpisodeSelector = ({
   useEffect(() => {
     if (episodes.length > 0) {
       const pageForSelectedEpisode = Math.ceil(selectedEpisode / episodesPerPage);
-      if (pageForSelectedEpisode !== currentPage) {
-        setCurrentPage(pageForSelectedEpisode);
-      }
+      setCurrentPage(pageForSelectedEpisode);
     }
   }, [selectedEpisode, episodes.length]);
 
@@ -114,6 +122,7 @@ const SeasonEpisodeSelector = ({
     try {
       console.log(`Fetching episodes for season ${seasonNumber}`);
       setLoading(true);
+      setError(null);
       
       const response = await fetch(
         `${TMDB_API_BASE}/tv/${id}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`
@@ -129,8 +138,8 @@ const SeasonEpisodeSelector = ({
       if (data.episodes && data.episodes.length > 0) {
         setEpisodes(data.episodes);
         
-        // If the current episode is greater than available episodes, reset to episode 1
-        if (selectedEpisode > data.episodes.length) {
+        // If the current episode doesn't exist in this season, set to episode 1
+        if (selectedEpisode > data.episodes.length || selectedEpisode < 1) {
           onEpisodeChange(1);
         }
       } else {

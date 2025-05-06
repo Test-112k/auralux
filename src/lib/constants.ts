@@ -6,22 +6,10 @@ export const TMDB_API_BASE = "https://api.themoviedb.org/3";
 // Streaming Servers with updated URLs
 export const STREAMING_SERVERS = {
   vidsrc: {
-    name: "VidSrc",
+    name: "Server 1",
     movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie/${id}`,
     tvUrl: (id: string, season: number, episode: number) => 
       `https://vidsrc.xyz/embed/tv/${id}/${season}-${episode}`
-  },
-  vidapi: {
-    name: "VidAPI",
-    movieUrl: (id: string) => `https://vidsrc.to/embed/movie?tmdb=${id}`,
-    tvUrl: (id: string, season: number, episode: number) => 
-      `https://vidsrc.to/embed/tv?tmdb=${id}&season=${season}&episode=${episode}`
-  },
-  streamable: {
-    name: "Streamable",
-    movieUrl: (id: string) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
-    tvUrl: (id: string, season: number, episode: number) => 
-      `https://vidsrc.me/embed/tv?tmdb=${id}&season=${season}&episode=${episode}`
   }
 };
 
