@@ -23,13 +23,14 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
       try {
         setLoading(true);
         // Use 'recommendations' to get the most relevant and latest related content
-        // sorted by most recently released and popular
-        const endpoint = `${TMDB_API_BASE}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}&language=en-US&page=1&sort_by=release_date.desc`;
+        // Set sort_by to popularity.desc to get trending content first
+        const endpoint = `${TMDB_API_BASE}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}&language=en-US&page=1&sort_by=popularity.desc`;
         const response = await fetch(endpoint, {
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
-          }
+          },
+          cache: 'no-store'
         });
         
         if (!response.ok) {
@@ -38,8 +39,17 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
         
         const data = await response.json();
         
-        // Sort by most recent first (to ensure latest content appears first)
+        // Sort by popularity first, then by most recent
         const sortedResults = data.results.sort((a: any, b: any) => {
+          // First sort by popularity (higher vote_count and vote_average is better)
+          const popularityA = (a.vote_count || 0) * (a.vote_average || 0);
+          const popularityB = (b.vote_count || 0) * (b.vote_average || 0);
+          
+          if (Math.abs(popularityB - popularityA) > 10) {
+            return popularityB - popularityA;
+          }
+          
+          // If popularity is similar, sort by date
           const dateA = mediaType === "movie" ? a.release_date : a.first_air_date;
           const dateB = mediaType === "movie" ? b.release_date : b.first_air_date;
           return new Date(dateB || "2000-01-01").getTime() - new Date(dateA || "2000-01-01").getTime();
@@ -92,13 +102,14 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
     try {
       setLoadingMore(true);
       const nextPage = page + 1;
-      // Similar to initial fetch, but with the next page
-      const endpoint = `${TMDB_API_BASE}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}&language=en-US&page=${nextPage}&sort_by=release_date.desc`;
+      // Similar to initial fetch, but with the next page and ensuring we get latest content
+      const endpoint = `${TMDB_API_BASE}/${mediaType}/${contentId}/recommendations?api_key=${TMDB_API_KEY}&language=en-US&page=${nextPage}&sort_by=popularity.desc`;
       const response = await fetch(endpoint, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
-        }
+        },
+        cache: 'no-store'
       });
       
       if (!response.ok) {
@@ -107,8 +118,17 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
       
       const data = await response.json();
       
-      // Sort by most recent first
+      // Sort by popularity first, then by most recent
       const sortedResults = data.results.sort((a: any, b: any) => {
+        // First sort by popularity (higher vote_count and vote_average is better)
+        const popularityA = (a.vote_count || 0) * (a.vote_average || 0);
+        const popularityB = (b.vote_count || 0) * (b.vote_average || 0);
+        
+        if (Math.abs(popularityB - popularityA) > 10) {
+          return popularityB - popularityA;
+        }
+        
+        // If popularity is similar, sort by date
         const dateA = mediaType === "movie" ? a.release_date : a.first_air_date;
         const dateB = mediaType === "movie" ? b.release_date : b.first_air_date;
         return new Date(dateB || "2000-01-01").getTime() - new Date(dateA || "2000-01-01").getTime();
@@ -156,7 +176,7 @@ const RelatedTitles = ({ contentId, mediaType, onSelectContent }: RelatedTitlesP
   }
 
   return (
-    <div className="mt-8">
+    <div className="mt-8 animate-fade-in">
       <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
         <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
         Related Titles

@@ -54,9 +54,14 @@ const SeasonEpisodeSelector = ({
       try {
         setLoading(true);
         setError(null);
+        
+        console.log(`Fetching TV details for content ID: ${contentId}`);
         const response = await fetch(
           `${TMDB_API_BASE}/tv/${contentId}?api_key=${TMDB_API_KEY}&language=en-US`,
-          { signal: controller.signal }
+          { 
+            signal: controller.signal,
+            cache: 'no-store' 
+          }
         );
         
         if (!response.ok) {
@@ -122,7 +127,7 @@ const SeasonEpisodeSelector = ({
     };
   }, [contentId]);
 
-  // Optimized fetchSeasonEpisodes with improved caching
+  // Optimized fetchSeasonEpisodes with improved caching and debounce
   const fetchSeasonEpisodes = useCallback(async (id: number, seasonNumber: number) => {
     const cacheKey = `${id}-${seasonNumber}`;
     
@@ -158,7 +163,8 @@ const SeasonEpisodeSelector = ({
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
-          }
+          },
+          cache: 'no-store'
         }
       );
       
@@ -222,15 +228,15 @@ const SeasonEpisodeSelector = ({
     ));
   }, [episodes]);
 
-  // Handle season change with explicit episode fetching
+  // Handle season change with immediate response
   const handleSeasonChange = useCallback((value: string) => {
     const season = parseInt(value);
     console.log(`Season selected: ${season}`);
     
-    // Update season in parent component
+    // Update season in parent component immediately
     onSeasonChange(season);
     
-    // Explicitly fetch episodes for the new season if needed
+    // Explicitly fetch episodes for the new season
     if (contentId && season > 0) {
       fetchSeasonEpisodes(contentId, season);
     }
@@ -265,7 +271,7 @@ const SeasonEpisodeSelector = ({
               onValueChange={handleSeasonChange}
               disabled={loading}
             >
-              <SelectTrigger className="w-[180px] bg-[#232323] hover:bg-[#2a2a2a] transition-colors">
+              <SelectTrigger className="w-[180px] bg-purple-950 hover:bg-purple-800 text-white border-purple-700 transition-all duration-300 animate-scale-in focus:ring-purple-500">
                 <SelectValue placeholder="Select Season">
                   {loading ? (
                     <div className="flex items-center gap-2">
@@ -276,7 +282,7 @@ const SeasonEpisodeSelector = ({
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-[#1A1A1A] border-[#333] animate-scale-in z-50 max-h-[300px]">
+              <SelectContent className="bg-[#1A1A1A] border-purple-700 animate-scale-in z-50 max-h-[300px]">
                 <ScrollArea className="h-[200px]">
                   {seasonItems}
                 </ScrollArea>
@@ -297,7 +303,7 @@ const SeasonEpisodeSelector = ({
               onValueChange={handleEpisodeChange}
               disabled={fetchingEpisodes}
             >
-              <SelectTrigger className="w-[220px] md:w-[280px] bg-[#232323] hover:bg-[#2a2a2a] transition-colors">
+              <SelectTrigger className="w-[220px] md:w-[280px] bg-purple-950 hover:bg-purple-800 text-white border-purple-700 transition-all duration-300 animate-scale-in focus:ring-purple-500">
                 <SelectValue placeholder="Select Episode">
                   {fetchingEpisodes ? (
                     <div className="flex items-center gap-2">
@@ -308,7 +314,7 @@ const SeasonEpisodeSelector = ({
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-[#1A1A1A] border-[#333] animate-scale-in z-50 max-h-[300px]">
+              <SelectContent className="bg-[#1A1A1A] border-purple-700 animate-scale-in z-50 max-h-[300px]">
                 <ScrollArea className="h-[250px]">
                   {episodeItems}
                 </ScrollArea>

@@ -73,7 +73,7 @@ const ContentViewer = ({
           href="https://t.me/auralux1" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-purple-500 hover:text-purple-400 transition-colors"
+          className="text-purple-500 hover:text-purple-400 transition-colors transform hover:scale-105 duration-300"
           title="Join our Telegram channel"
         >
           <svg 
@@ -101,10 +101,10 @@ const ContentViewer = ({
                 onValueChange={(value) => setSelectedServer(value)}
                 disabled={loading}
               >
-                <SelectTrigger className="w-[180px] bg-[#232323]">
+                <SelectTrigger className="w-[180px] bg-purple-950 hover:bg-purple-800 text-white border-purple-700 transition-all duration-300">
                   <SelectValue placeholder="Select Server" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-[#333] z-50">
+                <SelectContent className="bg-[#1A1A1A] border-purple-700 z-50">
                   <SelectItem value="vidsrc">Server 1</SelectItem>
                 </SelectContent>
               </Select>
@@ -126,7 +126,7 @@ const ContentViewer = ({
               loading={loading} 
             />
 
-            {/* Alternative Viewing Options Alert */}
+            {/* Alternative Viewing Options Alert - Updated Message */}
             <div className="mt-4 bg-[#1E1E1E] border border-purple-800 rounded-lg p-4 animate-fade-in">
               <p className="text-center text-white mb-3">
                 If you are unable to watch here, want English Or Dub Version, or Want to download it, then visit our telegram channel or website
@@ -173,9 +173,9 @@ const ContentViewer = ({
                     {episodes.map((episode) => (
                       <div
                         key={`episode-${episode.episode_number}`}
-                        className={`p-4 rounded-lg cursor-pointer transition-all ${
+                        className={`p-4 rounded-lg cursor-pointer transition-all transform hover:scale-102 duration-200 ${
                           selectedEpisode === episode.episode_number
-                            ? "bg-purple-500"
+                            ? "bg-purple-700 shadow-lg shadow-purple-900/50"
                             : "bg-[#232323] hover:bg-[#2a2a2a]"
                         }`}
                         onClick={() =>
@@ -219,7 +219,7 @@ const ContentViewer = ({
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-gray-400">Score:</span>
-                <span className="bg-purple-500 px-2 py-1 rounded">
+                <span className="bg-purple-700 px-2 py-1 rounded">
                   {selectedContent.score?.toFixed(1) || "N/A"}
                 </span>
               </div>
