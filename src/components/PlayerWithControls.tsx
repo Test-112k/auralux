@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 
 interface PlayerWithControlsProps {
@@ -11,6 +11,14 @@ interface PlayerWithControlsProps {
 const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [key, setKey] = useState(Date.now()); // Add key to force iframe refresh
+
+  // Reset loading and error states when src changes
+  useEffect(() => {
+    setIsLoading(true);
+    setError(false);
+    setKey(Date.now()); // Force iframe refresh when src changes
+  }, [src]);
   
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -25,11 +33,7 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
   const refreshPlayer = () => {
     setIsLoading(true);
     setError(false);
-    // Force iframe refresh by changing key
-    const iframe = document.getElementById('player-iframe') as HTMLIFrameElement;
-    if (iframe) {
-      iframe.src = iframe.src;
-    }
+    setKey(Date.now()); // Force iframe refresh
   };
 
   return (
@@ -58,7 +62,7 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
       
       <iframe
         id="player-iframe"
-        key={src}
+        key={key}
         src={src}
         className="w-full h-full"
         frameBorder="0"

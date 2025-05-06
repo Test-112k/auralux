@@ -13,15 +13,15 @@ export const STREAMING_SERVERS = {
   },
   vidapi: {
     name: "VidAPI",
-    movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie?imdb=${id}`,
+    movieUrl: (id: string) => `https://vidsrc.to/embed/movie?tmdb=${id}`,
     tvUrl: (id: string, season: number, episode: number) => 
-      `https://vidsrc.xyz/embed/tv?imdb=${id}&season=${season}&episode=${episode}`
+      `https://vidsrc.to/embed/tv?tmdb=${id}&season=${season}&episode=${episode}`
   },
   streamable: {
     name: "Streamable",
-    movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie?tmdb=${id}`,
+    movieUrl: (id: string) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
     tvUrl: (id: string, season: number, episode: number) => 
-      `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${season}&episode=${episode}`
+      `https://vidsrc.me/embed/tv?tmdb=${id}&season=${season}&episode=${episode}`
   }
 };
 

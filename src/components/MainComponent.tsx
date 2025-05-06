@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -445,31 +444,11 @@ function MainComponent() {
   const getStreamingUrl = (content) => {
     if (!content?.id) return "";
 
-    // Use IMDB ID if available
-    if (content.imdb_id) {
-      if (selectedServer === "vidapi") {
-        if (content.media_type === "movie") {
-          return STREAMING_SERVERS.vidapi.movieUrl(content.imdb_id);
-        } else {
-          return STREAMING_SERVERS.vidapi.tvUrl(content.imdb_id, selectedSeason, selectedEpisode);
-        }
-      }
-    }
-
-    // Use TMDB ID as fallback
-    if (selectedServer === "streamable") {
-      if (content.media_type === "movie") {
-        return STREAMING_SERVERS.streamable.movieUrl(content.id);
-      } else {
-        return STREAMING_SERVERS.streamable.tvUrl(content.id, selectedSeason, selectedEpisode);
-      }
-    }
-
-    // Default to vidsrc
+    // Use TMDB ID for all servers as they all support it now
     if (content.media_type === "movie") {
-      return STREAMING_SERVERS.vidsrc.movieUrl(content.id);
+      return STREAMING_SERVERS[selectedServer].movieUrl(content.id);
     } else {
-      return STREAMING_SERVERS.vidsrc.tvUrl(content.id, selectedSeason, selectedEpisode);
+      return STREAMING_SERVERS[selectedServer].tvUrl(content.id, selectedSeason, selectedEpisode);
     }
   };
 
