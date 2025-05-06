@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import SeasonEpisodeSelector from './SeasonEpisodeSelector';
 import PlayerWithControls from './PlayerWithControls';
 import RelatedTitles from './RelatedTitles';
+import AnnouncementSection from './AnnouncementSection';
 
 interface ContentViewerProps {
   selectedContent: any;
@@ -82,20 +83,6 @@ const ContentViewer = ({
     setSelectedEpisode(episodeNumber);
   };
 
-  // Handle navigation to previous episode
-  const handlePrevEpisode = () => {
-    if (selectedEpisode > 1) {
-      setSelectedEpisode(selectedEpisode - 1);
-    }
-  };
-
-  // Handle navigation to next episode
-  const handleNextEpisode = () => {
-    if (selectedEpisode < episodes.length) {
-      setSelectedEpisode(selectedEpisode + 1);
-    }
-  };
-
   return (
     <div className="mt-4" ref={contentRef} id="content-top">
       <div className="mb-6 flex justify-between items-center">
@@ -114,19 +101,20 @@ const ContentViewer = ({
         >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
+            width="24" 
+            height="24" 
             viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
+            fill="currentColor"
             className="w-6 h-6"
           >
-            <path d="M21.6 5.2L2.4 11.2c-.99.4-.99 1.8 0 2.2l4.8 1.8 1.8 5.8c.22.7 1.2.96 1.78.43l2.5-2.28 4.9 3.93c.67.52 1.67.1 1.82-.76L22 6.4c.2-1.1-.76-2-1.6-1.2z" />
-            <path d="M11 14l-5 3.5" />
-            <path d="M14 13l-3 1" />
+            <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.95 8.12-1.56 7.34c-.12.52-.67.79-1.12.53l-3.16-2.24-1.63 1.6c-.1.1-.35.24-.46.24-.17 0-.14-.13-.2-.47l-.45-3.25-2.77-1.23a.76.76 0 0 1 .05-1.44l11.09-4.18c.4-.14.82.22.7.63l.51 2.47z" />
           </svg>
         </a>
+      </div>
+
+      {/* Announcement section in watch page */}
+      <div className="mb-6">
+        <AnnouncementSection />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
@@ -166,31 +154,6 @@ const ContentViewer = ({
 
           {selectedContent.media_type === "tv" && episodes.length > 0 && (
             <>
-              <div className="flex items-center justify-between gap-4">
-                <button
-                  onClick={handlePrevEpisode}
-                  disabled={selectedEpisode <= 1 || loading}
-                  className={`px-4 py-2 rounded text-sm ${
-                    selectedEpisode <= 1 || loading
-                      ? "bg-gray-700 cursor-not-allowed"
-                      : "bg-purple-500 hover:bg-purple-600"
-                  }`}
-                >
-                  Previous Episode
-                </button>
-                <button
-                  onClick={handleNextEpisode}
-                  disabled={selectedEpisode >= episodes.length || loading}
-                  className={`px-4 py-2 rounded text-sm ${
-                    selectedEpisode >= episodes.length || loading
-                      ? "bg-gray-700 cursor-not-allowed"
-                      : "bg-purple-500 hover:bg-purple-600"
-                  }`}
-                >
-                  Next Episode
-                </button>
-              </div>
-
               <div className="bg-[#161616] p-4 rounded-lg">
                 <h3 className="text-xl font-bold mb-4">Episodes</h3>
                 <ScrollArea className="h-[500px] pr-4">
