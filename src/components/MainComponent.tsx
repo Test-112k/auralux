@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -697,7 +698,20 @@ function MainComponent() {
               className="text-purple-500 hover:text-purple-400 transition-colors flex items-center justify-center"
               title="Join our Telegram channel"
             >
-              <MessageCircle size={24} />
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="w-6 h-6"
+              >
+                <path d="M21.6 5.2L2.4 11.2c-.99.4-.99 1.8 0 2.2l4.8 1.8 1.8 5.8c.22.7 1.2.96 1.78.43l2.5-2.28 4.9 3.93c.67.52 1.67.1 1.82-.76L22 6.4c.2-1.1-.76-2-1.6-1.2z" />
+                <path d="M11 14l-5 3.5" />
+                <path d="M14 13l-3 1" />
+              </svg>
             </a>
           </div>
         </div>
@@ -830,20 +844,43 @@ function MainComponent() {
             <div className="bg-gradient-to-r from-purple-900 to-indigo-900 p-6 rounded-lg mb-8 shadow-lg">
               <div className="flex flex-col md:flex-row items-center justify-between">
                 <div className="mb-4 md:mb-0 md:mr-4">
-                  <h2 className="text-xl font-bold text-white mb-2">Looking for English or Hindi-English Dub Titles?</h2>
+                  <h2 className="text-xl font-bold text-white mb-2">Watch Hindi-English Dubbed titles</h2>
                   <p className="text-gray-200">
-                    Join our Telegram channel to get direct links to all your favorite content.
+                    Visit our website or Telegram channel. Facing issues? Report to us right away.
                   </p>
                 </div>
-                <a 
-                  href="https://t.me/auralux1" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="px-6 py-3 bg-purple-500 hover:bg-purple-600 transition-colors rounded-full font-semibold text-white flex items-center gap-2"
-                >
-                  <MessageCircle size={18} />
-                  Join Now
-                </a>
+                <div className="flex gap-3">
+                  <a 
+                    href="https://t.me/auralux1" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-purple-500 hover:bg-purple-600 transition-colors rounded-full font-semibold text-white flex items-center gap-2"
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      className="w-5 h-5"
+                    >
+                      <path d="M21.6 5.2L2.4 11.2c-.99.4-.99 1.8 0 2.2l4.8 1.8 1.8 5.8c.22.7 1.2.96 1.78.43l2.5-2.28 4.9 3.93c.67.52 1.67.1 1.82-.76L22 6.4c.2-1.1-.76-2-1.6-1.2z" />
+                      <path d="M11 14l-5 3.5" />
+                      <path d="M14 13l-3 1" />
+                    </svg>
+                    Join Now
+                  </a>
+                  <a 
+                    href="https://auralux.app" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-gray-700 hover:bg-gray-600 transition-colors rounded-full font-semibold text-white flex items-center gap-2"
+                  >
+                    Website
+                  </a>
+                </div>
               </div>
             </div>
 

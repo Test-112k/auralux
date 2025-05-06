@@ -1,10 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SeasonEpisodeSelector from './SeasonEpisodeSelector';
 import PlayerWithControls from './PlayerWithControls';
 import RelatedTitles from './RelatedTitles';
-import { MessageCircle } from 'lucide-react';
 
 interface ContentViewerProps {
   selectedContent: any;
@@ -112,7 +112,20 @@ const ContentViewer = ({
           className="text-purple-500 hover:text-purple-400 transition-colors"
           title="Join our Telegram channel"
         >
-          <MessageCircle size={24} />
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="w-6 h-6"
+          >
+            <path d="M21.6 5.2L2.4 11.2c-.99.4-.99 1.8 0 2.2l4.8 1.8 1.8 5.8c.22.7 1.2.96 1.78.43l2.5-2.28 4.9 3.93c.67.52 1.67.1 1.82-.76L22 6.4c.2-1.1-.76-2-1.6-1.2z" />
+            <path d="M11 14l-5 3.5" />
+            <path d="M14 13l-3 1" />
+          </svg>
         </a>
       </div>
 

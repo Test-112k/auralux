@@ -15,7 +15,7 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
   const [key, setKey] = useState(Date.now()); // Add key to force iframe refresh
   const { toast } = useToast();
   
-  // Get stored information for the current video
+  // Get storage key for the current video
   const getStorageKey = () => `player_state_${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
   
   // Restore player state when the component mounts
@@ -52,6 +52,8 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
 
   // Save player position into localStorage
   const savePlayerState = () => {
+    if (!src) return; // Don't save if there's no source
+    
     try {
       // Only save state if iframe is loaded and no error
       if (!isLoading && !error) {
@@ -94,6 +96,9 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
   const handleError = () => {
     setError(true);
     setIsLoading(false);
+    
+    // Save state when error occurs to help with recovery
+    savePlayerState();
   };
 
   const refreshPlayer = () => {

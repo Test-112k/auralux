@@ -74,15 +74,20 @@ const SeasonEpisodeSelector = ({
 
         setSeasons(validSeasons);
 
+        // Wait for seasons to be set before fetching episodes
         if (validSeasons.length > 0) {
-          // Use selectedSeason if it's valid, otherwise use the first valid season
-          let seasonToFetch = selectedSeason;
-          if (!selectedSeason || !validSeasons.some(s => s.season_number === selectedSeason)) {
-            seasonToFetch = validSeasons[0].season_number;
-            // Update parent component with the new season
+          // Check if the current selectedSeason is valid
+          const seasonExists = validSeasons.some(s => s.season_number === selectedSeason);
+          
+          // Use existing season if valid, otherwise use first available season
+          const seasonToFetch = seasonExists ? selectedSeason : validSeasons[0].season_number;
+          
+          // Update parent component with season number if different
+          if (seasonToFetch !== selectedSeason) {
+            console.log(`Selected season ${selectedSeason} not found, using season ${seasonToFetch} instead`);
             onSeasonChange(seasonToFetch);
           } else {
-            // If the season is valid, fetch episodes for it
+            // If using the same season, still need to fetch episodes
             await fetchSeasonEpisodes(contentId, seasonToFetch);
           }
         } else {
@@ -107,22 +112,25 @@ const SeasonEpisodeSelector = ({
   // Fetch episodes when selectedSeason changes
   useEffect(() => {
     if (contentId && selectedSeason > 0 && seasons.length > 0) {
-      // Only fetch if the selected season exists in our seasons list
-      if (seasons.some(s => s.season_number === selectedSeason)) {
+      // Verify the season exists in our seasons list
+      const seasonExists = seasons.some(s => s.season_number === selectedSeason);
+      if (seasonExists) {
         fetchSeasonEpisodes(contentId, selectedSeason);
+      } else {
+        console.log(`Warning: Attempted to fetch invalid season ${selectedSeason}`);
       }
     }
   }, [contentId, selectedSeason, seasons]);
 
   // Determine which page contains the selected episode
   useEffect(() => {
-    if (episodes.length > 0) {
+    if (episodes.length > 0 && !fetchingEpisodes) {
       const pageForSelectedEpisode = Math.ceil(selectedEpisode / episodesPerPage);
-      if (pageForSelectedEpisode !== currentPage) {
+      if (pageForSelectedEpisode !== currentPage && pageForSelectedEpisode > 0) {
         setCurrentPage(pageForSelectedEpisode);
       }
     }
-  }, [selectedEpisode, episodes.length]);
+  }, [selectedEpisode, episodes.length, fetchingEpisodes]);
 
   const fetchSeasonEpisodes = async (id: number, seasonNumber: number) => {
     try {
@@ -145,7 +153,9 @@ const SeasonEpisodeSelector = ({
         setEpisodes(data.episodes);
         
         // If the current episode doesn't exist in this season, set to episode 1
-        if (selectedEpisode > data.episodes.length || selectedEpisode < 1) {
+        const episodeExists = data.episodes.some((ep: any) => ep.episode_number === selectedEpisode);
+        if (!episodeExists) {
+          console.log(`Episode ${selectedEpisode} not found in season ${seasonNumber}, resetting to episode 1`);
           onEpisodeChange(1);
         }
       } else {
@@ -274,13 +284,21 @@ const SeasonEpisodeSelector = ({
               disabled={loading || fetchingEpisodes}
             >
               <SelectTrigger className="w-[180px] bg-[#232323]">
-                <SelectValue placeholder="Select Season" />
+                <SelectValue placeholder="Select Season">
+                  {loading || fetchingEpisodes ? (
+                    <div className="flex items-center gap-2">
+                      <span>Loading...</span>
+                    </div>
+                  ) : (
+                    `Season ${selectedSeason}`
+                  )}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <ScrollArea className="h-[200px]">
                   {seasons.map((season) => (
                     <SelectItem key={season.season_number} value={season.season_number.toString()}>
-                      Season {season.season_number}
+                      Season {season.season_number} ({season.episode_count} episodes)
                     </SelectItem>
                   ))}
                 </ScrollArea>
@@ -302,7 +320,15 @@ const SeasonEpisodeSelector = ({
               disabled={fetchingEpisodes}
             >
               <SelectTrigger className="w-[180px] bg-[#232323]">
-                <SelectValue placeholder="Select Episode" />
+                <SelectValue placeholder="Select Episode">
+                  {fetchingEpisodes ? (
+                    <div className="flex items-center gap-2">
+                      <span>Loading...</span>
+                    </div>
+                  ) : (
+                    `Episode ${selectedEpisode}`
+                  )}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <ScrollArea className="h-[200px]">
