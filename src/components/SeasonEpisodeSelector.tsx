@@ -271,7 +271,9 @@ const SeasonEpisodeSelector = ({
               onValueChange={handleSeasonChange}
               disabled={loading}
             >
-              <SelectTrigger className="w-[180px] bg-purple-950 hover:bg-purple-800 text-white border-purple-700 transition-all duration-300 animate-scale-in focus:ring-purple-500">
+              <SelectTrigger 
+                className="w-[180px] bg-[#2D1B69] hover:bg-[#3D2B79] text-white border-[#6E59A5] transition-all duration-300 animate-scale-in focus:ring-[#9B87F5] shadow-md shadow-purple-900/30"
+              >
                 <SelectValue placeholder="Select Season">
                   {loading ? (
                     <div className="flex items-center gap-2">
@@ -282,7 +284,9 @@ const SeasonEpisodeSelector = ({
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-[#1A1A1A] border-purple-700 animate-scale-in z-50 max-h-[300px]">
+              <SelectContent 
+                className="bg-[#1A1F2C] border-[#6E59A5] animate-scale-in z-50 max-h-[300px] shadow-lg shadow-purple-900/20"
+              >
                 <ScrollArea className="h-[200px]">
                   {seasonItems}
                 </ScrollArea>
@@ -303,7 +307,9 @@ const SeasonEpisodeSelector = ({
               onValueChange={handleEpisodeChange}
               disabled={fetchingEpisodes}
             >
-              <SelectTrigger className="w-[220px] md:w-[280px] bg-purple-950 hover:bg-purple-800 text-white border-purple-700 transition-all duration-300 animate-scale-in focus:ring-purple-500">
+              <SelectTrigger 
+                className="w-[220px] md:w-[280px] bg-[#2D1B69] hover:bg-[#3D2B79] text-white border-[#6E59A5] transition-all duration-300 animate-scale-in focus:ring-[#9B87F5] shadow-md shadow-purple-900/30"
+              >
                 <SelectValue placeholder="Select Episode">
                   {fetchingEpisodes ? (
                     <div className="flex items-center gap-2">
@@ -314,7 +320,9 @@ const SeasonEpisodeSelector = ({
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-[#1A1A1A] border-purple-700 animate-scale-in z-50 max-h-[300px]">
+              <SelectContent 
+                className="bg-[#1A1F2C] border-[#6E59A5] animate-scale-in z-50 max-h-[300px] shadow-lg shadow-purple-900/20"
+              >
                 <ScrollArea className="h-[250px]">
                   {episodeItems}
                 </ScrollArea>
