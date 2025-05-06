@@ -57,6 +57,7 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
       if (!isLoading && !error) {
         const playerState = {
           src,
+          title,
           timestamp: Date.now(),
         };
         localStorage.setItem(getStorageKey(), JSON.stringify(playerState));
@@ -76,12 +77,14 @@ const PlayerWithControls = ({ src, title, loading }: PlayerWithControlsProps) =>
       const savedState = localStorage.getItem(getStorageKey());
       if (savedState) {
         const parsedState = JSON.parse(savedState);
-        // Only show toast if there's a saved state
-        toast({
-          title: "Video Resumed",
-          description: "Your last viewing position has been restored",
-          duration: 3000,
-        });
+        if (parsedState.src === src) {
+          // Only show toast if there's a saved state for this exact video
+          toast({
+            title: "Video Resumed",
+            description: "Your last viewing position has been restored",
+            duration: 3000,
+          });
+        }
       }
     } catch (error) {
       console.error("Error handling iframe load:", error);

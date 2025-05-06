@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Search, ArrowLeft, ArrowUp, Menu } from "lucide-react";
+import { Search, ArrowLeft, ArrowUp, Menu, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS } from "../lib/constants";
 import RegionSelector from "./RegionSelector";
 import ContentViewer from "./ContentViewer";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 function MainComponent() {
@@ -637,58 +637,69 @@ function MainComponent() {
               )}
             </div>
           </div>
-          <form onSubmit={handleSearchSubmit} className="relative w-1/3">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search"
-                className="w-full bg-[#232323] pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            </div>
-            {searchResults.length > 0 && (
-              <div className="absolute w-full mt-2 bg-[#232323] rounded-lg shadow-lg z-50 border border-gray-700">
-                <ScrollArea className="h-96">
-                  {searchResults.map((item) => (
-                    <div
-                      key={`search-${item.id}`}
-                      className="p-3 hover:bg-[#2a2a2a] cursor-pointer flex items-center gap-3 border-b border-gray-700 last:border-none"
-                      onClick={() => handleContentSelection(item)}
-                    >
-                      {item.poster_path ? (
-                        <img
-                          src={item.poster_path}
-                          alt={item.title}
-                          className="w-12 h-16 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="w-12 h-16 bg-gray-800 flex items-center justify-center rounded">
-                          <span className="text-xs text-gray-500">No Image</span>
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-medium text-sm">{item.title}</div>
-                        <div className="text-xs text-gray-400 mt-1">
-                          {item.media_type === "movie" ? "Movie" : "TV"} • {item.year || "N/A"}
+          <div className="flex items-center gap-4">
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search"
+                  className="w-full bg-[#232323] pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              </div>
+              {searchResults.length > 0 && (
+                <div className="absolute w-full mt-2 bg-[#232323] rounded-lg shadow-lg z-50 border border-gray-700">
+                  <ScrollArea className="h-96">
+                    {searchResults.map((item) => (
+                      <div
+                        key={`search-${item.id}`}
+                        className="p-3 hover:bg-[#2a2a2a] cursor-pointer flex items-center gap-3 border-b border-gray-700 last:border-none"
+                        onClick={() => handleContentSelection(item)}
+                      >
+                        {item.poster_path ? (
+                          <img
+                            src={item.poster_path}
+                            alt={item.title}
+                            className="w-12 h-16 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-16 bg-gray-800 flex items-center justify-center rounded">
+                            <span className="text-xs text-gray-500">No Image</span>
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium text-sm">{item.title}</div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {item.media_type === "movie" ? "Movie" : "TV"} • {item.year || "N/A"}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  
-                  {searchResults.length > 10 && (
-                    <button
-                      onClick={() => navigate(`/search?q=${encodeURIComponent(searchQuery)}`)}
-                      className="w-full p-3 text-center text-sm text-purple-400 hover:text-purple-300 bg-[#1a1a1a]"
-                    >
-                      See all results
-                    </button>
-                  )}
-                </ScrollArea>
-              </div>
-            )}
-          </form>
+                    ))}
+                    
+                    {searchResults.length > 10 && (
+                      <button
+                        onClick={() => navigate(`/search?q=${encodeURIComponent(searchQuery)}`)}
+                        className="w-full p-3 text-center text-sm text-purple-400 hover:text-purple-300 bg-[#1a1a1a]"
+                      >
+                        See all results
+                      </button>
+                    )}
+                  </ScrollArea>
+                </div>
+              )}
+            </form>
+            <a 
+              href="https://t.me/auralux1" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-purple-500 hover:text-purple-400 transition-colors flex items-center justify-center"
+              title="Join our Telegram channel"
+            >
+              <MessageCircle size={24} />
+            </a>
+          </div>
         </div>
       </nav>
 
@@ -745,10 +756,7 @@ function MainComponent() {
               <div className="mt-2">
                 <RegionSelector 
                   selectedRegion={selectedRegion} 
-                  onRegionChange={(code) => {
-                    handleRegionChange(code);
-                    setMobileMenuOpen(false);
-                  }} 
+                  onRegionChange={handleRegionChange} 
                 />
               </div>
             )}
@@ -817,6 +825,26 @@ function MainComponent() {
                   />
                 </div>
               )}
+            </div>
+
+            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 p-6 rounded-lg mb-8 shadow-lg">
+              <div className="flex flex-col md:flex-row items-center justify-between">
+                <div className="mb-4 md:mb-0 md:mr-4">
+                  <h2 className="text-xl font-bold text-white mb-2">Looking for English or Hindi-English Dub Titles?</h2>
+                  <p className="text-gray-200">
+                    Join our Telegram channel to get direct links to all your favorite content.
+                  </p>
+                </div>
+                <a 
+                  href="https://t.me/auralux1" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 bg-purple-500 hover:bg-purple-600 transition-colors rounded-full font-semibold text-white flex items-center gap-2"
+                >
+                  <MessageCircle size={18} />
+                  Join Now
+                </a>
+              </div>
             </div>
 
             <section className="mb-10">
