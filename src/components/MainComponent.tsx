@@ -121,21 +121,24 @@ function MainComponent() {
       let endpoint = "";
       let setter;
       
+      // Common parameter to exclude adult content
+      const excludeAdultContent = "&include_adult=false";
+      
       switch(contentType) {
         case CONTENT_TYPES.ANIME:
-          endpoint = `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc${excludeAdultContent}&page=${nextPage}`;
           setter = setPopularAnime;
           break;
         case CONTENT_TYPES.MOVIE:
-          endpoint = `${TMDB_API_BASE}/movie/popular?api_key=${TMDB_API_KEY}&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/movie/popular?api_key=${TMDB_API_KEY}${excludeAdultContent}&page=${nextPage}`;
           setter = setPopularMovies;
           break;
         case CONTENT_TYPES.TV:
-          endpoint = `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16${excludeAdultContent}&page=${nextPage}`;
           setter = setPopularTV;
           break;
         case CONTENT_TYPES.REGIONAL:
-          endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc${excludeAdultContent}&page=${nextPage}`;
           setter = setHindiContent;
           break;
       }
@@ -176,15 +179,18 @@ function MainComponent() {
     try {
       setLoading(true);
       
+      // Common parameters to exclude adult content across all requests
+      const excludeAdultContent = "&include_adult=false&certification.lte=PG-13";
+      
       if (contentType === CONTENT_TYPES.ANIME) {
         // Get trending anime - use currently airing anime for better recency
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/tv/airing_today?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&page=1`
+          `${TMDB_API_BASE}/tv/airing_today?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP${excludeAdultContent}&page=1`
         );
         
         // Get popular anime - ensure it's from Japan with animation genre
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc${excludeAdultContent}&page=1`
         );
         
         // Get new arrivals - anime from Japan with most recent first, limit to last 2 years for freshness
@@ -193,7 +199,7 @@ function MainComponent() {
         const twoYearsAgoStr = twoYearsAgo.toISOString().split('T')[0];
         
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.gte=${twoYearsAgoStr}&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.gte=${twoYearsAgoStr}&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -223,17 +229,17 @@ function MainComponent() {
       } else if (contentType === CONTENT_TYPES.MOVIE) {
         // Get trending movies - prioritize current week for true trending
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/trending/movie/day?api_key=${TMDB_API_KEY}`
+          `${TMDB_API_BASE}/trending/movie/day?api_key=${TMDB_API_KEY}${excludeAdultContent}`
         );
         
         // Get popular movies (overall popularity)
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/movie/popular?api_key=${TMDB_API_KEY}`
+          `${TMDB_API_BASE}/movie/popular?api_key=${TMDB_API_KEY}${excludeAdultContent}`
         );
         
         // Get new arrivals (newest first)
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -252,17 +258,17 @@ function MainComponent() {
       } else if (contentType === CONTENT_TYPES.TV) {
         // Get trending TV - updated to use daily trending for recency, exclude animation genre
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/trending/tv/day?api_key=${TMDB_API_KEY}`
+          `${TMDB_API_BASE}/trending/tv/day?api_key=${TMDB_API_KEY}${excludeAdultContent}`
         );
         
         // Get popular TV - exclude animation genre to avoid anime
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}`
+          `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}${excludeAdultContent}`
         );
         
         // Get new arrivals - exclude animation genre
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -287,17 +293,17 @@ function MainComponent() {
       } else if (contentType === CONTENT_TYPES.REGIONAL) {
         // Get trending regional content (last 7 days)
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=1`
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc${excludeAdultContent}&page=1`
         );
         
         // Get popular regional content (overall popularity)
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=2`
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc${excludeAdultContent}&page=2`
         );
         
         // Get new arrivals (newest first)
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -357,15 +363,18 @@ function MainComponent() {
       setLoading(true);
       let endpoint;
       
+      // Common parameter to exclude adult content
+      const excludeAdultContent = "&include_adult=false";
+      
       if (contentType === CONTENT_TYPES.REGIONAL) {
-        endpoint = `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}`;
+        endpoint = `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}${excludeAdultContent}`;
       } else {
         if (contentType === CONTENT_TYPES.MOVIE) {
-          endpoint = `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${searchQuery}`;
+          endpoint = `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${searchQuery}${excludeAdultContent}`;
         } else if (contentType === CONTENT_TYPES.TV) {
-          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&without_genres=16`;
+          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&without_genres=16${excludeAdultContent}`;
         } else if (contentType === CONTENT_TYPES.ANIME) {
-          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_genres=16&with_origin_country=JP`;
+          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_genres=16&with_origin_country=JP${excludeAdultContent}`;
         }
       }
       
