@@ -123,7 +123,7 @@ function MainComponent() {
       
       switch(contentType) {
         case CONTENT_TYPES.ANIME:
-          endpoint = `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=popularity.desc&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc&page=${nextPage}`;
           setter = setPopularAnime;
           break;
         case CONTENT_TYPES.MOVIE:
@@ -177,19 +177,19 @@ function MainComponent() {
       setLoading(true);
       
       if (contentType === CONTENT_TYPES.ANIME) {
-        // Get trending anime (last 7 days)
+        // Get trending anime - make sure it's from Japan and has animation genre
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}&with_genres=16`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc&page=1`
         );
         
-        // Get popular anime (overall popularity)
+        // Get popular anime - also ensure it's from Japan
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=popularity.desc&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc&page=1`
         );
         
-        // Get new arrivals (newest first)
+        // Get new arrivals - ensure it's anime from Japan
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -200,9 +200,10 @@ function MainComponent() {
         const popularData = await popularResponse.json();
         const newArrivalsData = await newArrivalsResponse.json();
 
-        setTrendingAnime(formatContentData(trendingData.results, "tv"));
-        setPopularAnime(formatContentData(popularData.results, "tv"));
-        setNewArrivalsAnime(formatContentData(newArrivalsData.results, "tv"));
+        // Add anime tag to make it clear these are anime
+        setTrendingAnime(formatContentData(trendingData.results, "tv").map(item => ({...item, isAnime: true})));
+        setPopularAnime(formatContentData(popularData.results, "tv").map(item => ({...item, isAnime: true})));
+        setNewArrivalsAnime(formatContentData(newArrivalsData.results, "tv").map(item => ({...item, isAnime: true})));
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.MOVIE) {
@@ -235,17 +236,17 @@ function MainComponent() {
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.TV) {
-        // Get trending TV (last 7 days)
+        // Get trending TV - exclude animation genre to avoid anime
         const trendingResponse = await fetch(
           `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}&without_genres=16`
         );
         
-        // Get popular TV (overall popularity)
+        // Get popular TV - exclude animation genre
         const popularResponse = await fetch(
           `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16`
         );
         
-        // Get new arrivals (newest first)
+        // Get new arrivals - exclude animation genre
         const newArrivalsResponse = await fetch(
           `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&without_genres=16&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
         );
@@ -342,9 +343,9 @@ function MainComponent() {
         if (contentType === CONTENT_TYPES.MOVIE) {
           endpoint = `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=${searchQuery}`;
         } else if (contentType === CONTENT_TYPES.TV) {
-          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}`;
+          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&without_genres=16`;
         } else if (contentType === CONTENT_TYPES.ANIME) {
-          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_genres=16`;
+          endpoint = `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=${searchQuery}&with_genres=16&with_origin_country=JP`;
         }
       }
       
@@ -573,7 +574,7 @@ function MainComponent() {
     );
   }
 
-  // Content card component to reduce repetition
+  // Content card component to reduce repetition - add anime badge
   const ContentCard = ({ item, index, refCallback = null }: { item: any; index: any; refCallback?: any }) => (
     <div
       key={`content-${item.id}`}
@@ -581,18 +582,25 @@ function MainComponent() {
       className="bg-[#161616] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg"
       onClick={() => handleContentSelection(item)}
     >
-      {item.poster_path ? (
-        <img
-          src={item.poster_path}
-          alt={item.title}
-          className="w-full aspect-[2/3] object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <div className="w-full aspect-[2/3] bg-gray-800 flex items-center justify-center">
-          <span className="text-sm text-gray-500">No Image</span>
-        </div>
-      )}
+      <div className="relative">
+        {item.poster_path ? (
+          <img
+            src={item.poster_path}
+            alt={item.title}
+            className="w-full aspect-[2/3] object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full aspect-[2/3] bg-gray-800 flex items-center justify-center">
+            <span className="text-sm text-gray-500">No Image</span>
+          </div>
+        )}
+        {item.isAnime && (
+          <span className="absolute top-2 right-2 text-xs bg-yellow-500 px-2 py-0.5 rounded-sm font-medium">
+            Anime
+          </span>
+        )}
+      </div>
       <div className="p-2">
         <h3 className="font-medium text-sm truncate">{item.title}</h3>
         <div className="flex items-center justify-between mt-1">
@@ -832,7 +840,7 @@ function MainComponent() {
                 contentType === CONTENT_TYPES.TV ? "bg-purple-500" : "bg-[#232323]"
               }`}
             >
-              TV Series
+              TV
             </button>
             <button 
               onClick={() => {
