@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -30,12 +29,16 @@ function MainComponent() {
   // Content lists
   const [trendingAnime, setTrendingAnime] = useState([]);
   const [popularAnime, setPopularAnime] = useState([]);
+  const [newArrivalsAnime, setNewArrivalsAnime] = useState([]);
   const [trendingMovies, setTrendingMovies] = useState([]);
   const [popularMovies, setPopularMovies] = useState([]);
+  const [newArrivalsMovies, setNewArrivalsMovies] = useState([]);
   const [trendingTV, setTrendingTV] = useState([]);
   const [popularTV, setPopularTV] = useState([]);
+  const [newArrivalsTV, setNewArrivalsTV] = useState([]);
   const [hindiContent, setHindiContent] = useState([]);
   const [trendingHindi, setTrendingHindi] = useState([]);
+  const [newArrivalsHindi, setNewArrivalsHindi] = useState([]);
   
   // Pagination variables
   const [page, setPage] = useState(1);
@@ -161,7 +164,6 @@ function MainComponent() {
     }
   };
 
-  // Add new scroll to top function
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -169,94 +171,125 @@ function MainComponent() {
     });
   };
 
-  // Update content fetch to filter by region
+  // Update content fetch to filter by region and get most recent content
   const fetchTrendingAndPopular = async () => {
     try {
       setLoading(true);
       
       if (contentType === CONTENT_TYPES.ANIME) {
-        const [trendingResponse, popularResponse] = await Promise.all([
-          fetch(
-            `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=popularity.desc&page=1`
-          ),
-          fetch(
-            `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=popularity.desc&page=2`
-          ),
-        ]);
+        // Get trending anime (last 7 days)
+        const trendingResponse = await fetch(
+          `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}&with_genres=16`
+        );
+        
+        // Get popular anime (overall popularity)
+        const popularResponse = await fetch(
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=popularity.desc&page=1`
+        );
+        
+        // Get new arrivals (newest first)
+        const newArrivalsResponse = await fetch(
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+        );
 
-        if (!trendingResponse.ok || !popularResponse.ok) {
+        if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
           throw new Error("Failed to fetch anime");
         }
 
         const trendingData = await trendingResponse.json();
         const popularData = await popularResponse.json();
+        const newArrivalsData = await newArrivalsResponse.json();
 
         setTrendingAnime(formatContentData(trendingData.results, "tv"));
         setPopularAnime(formatContentData(popularData.results, "tv"));
+        setNewArrivalsAnime(formatContentData(newArrivalsData.results, "tv"));
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.MOVIE) {
-        const [trendingResponse, popularResponse] = await Promise.all([
-          fetch(
-            `${TMDB_API_BASE}/trending/movie/week?api_key=${TMDB_API_KEY}`
-          ),
-          fetch(
-            `${TMDB_API_BASE}/movie/popular?api_key=${TMDB_API_KEY}`
-          ),
-        ]);
+        // Get trending movies (last 7 days)
+        const trendingResponse = await fetch(
+          `${TMDB_API_BASE}/trending/movie/week?api_key=${TMDB_API_KEY}`
+        );
+        
+        // Get popular movies (overall popularity)
+        const popularResponse = await fetch(
+          `${TMDB_API_BASE}/movie/popular?api_key=${TMDB_API_KEY}`
+        );
+        
+        // Get new arrivals (newest first)
+        const newArrivalsResponse = await fetch(
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+        );
 
-        if (!trendingResponse.ok || !popularResponse.ok) {
+        if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
           throw new Error("Failed to fetch movies");
         }
 
         const trendingData = await trendingResponse.json();
         const popularData = await popularResponse.json();
+        const newArrivalsData = await newArrivalsResponse.json();
 
         setTrendingMovies(formatContentData(trendingData.results, "movie"));
         setPopularMovies(formatContentData(popularData.results, "movie"));
+        setNewArrivalsMovies(formatContentData(newArrivalsData.results, "movie"));
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.TV) {
-        const [trendingResponse, popularResponse] = await Promise.all([
-          fetch(
-            `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}&without_genres=16`
-          ),
-          fetch(
-            `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16`
-          ),
-        ]);
+        // Get trending TV (last 7 days)
+        const trendingResponse = await fetch(
+          `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}&without_genres=16`
+        );
+        
+        // Get popular TV (overall popularity)
+        const popularResponse = await fetch(
+          `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16`
+        );
+        
+        // Get new arrivals (newest first)
+        const newArrivalsResponse = await fetch(
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&without_genres=16&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+        );
 
-        if (!trendingResponse.ok || !popularResponse.ok) {
+        if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
           throw new Error("Failed to fetch TV series");
         }
 
         const trendingData = await trendingResponse.json();
         const popularData = await popularResponse.json();
+        const newArrivalsData = await newArrivalsResponse.json();
 
         setTrendingTV(formatContentData(trendingData.results, "tv"));
         setPopularTV(formatContentData(popularData.results, "tv"));
+        setNewArrivalsTV(formatContentData(newArrivalsData.results, "tv"));
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.REGIONAL) {
-        // For regional, get both native language content and English language content about the region
-        const [trendingResponse, popularResponse] = await Promise.all([
-          fetch(
-            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=1`
-          ),
-          fetch(
-            `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=2`
-          )
-        ]);
+        // Get trending regional content (last 7 days)
+        const trendingResponse = await fetch(
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=1`
+        );
+        
+        // Get popular regional content (overall popularity)
+        const popularResponse = await fetch(
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc&page=2`
+        );
+        
+        // Get new arrivals (newest first)
+        const newArrivalsResponse = await fetch(
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+        );
 
-        if (!trendingResponse.ok || !popularResponse.ok) {
+        if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
           throw new Error(`Failed to fetch ${selectedRegion.name} content`);
         }
 
         const trendingData = await trendingResponse.json();
         const popularData = await popularResponse.json();
+        const newArrivalsData = await newArrivalsResponse.json();
 
         setTrendingHindi(formatContentData(trendingData.results, "movie"));
         setHindiContent(formatContentData(popularData.results, "movie"));
+        setNewArrivalsHindi(formatContentData(newArrivalsData.results, "movie"));
         
         setHasMore(popularData.page < popularData.total_pages);
       }
@@ -273,6 +306,7 @@ function MainComponent() {
     }
   };
 
+  // Format API data into consistent format
   const formatContentData = (items, mediaType) => {
     return items.map((item) => ({
       id: item.id,
@@ -296,6 +330,7 @@ function MainComponent() {
     }));
   };
 
+  // Search content
   const searchContent = async () => {
     try {
       setLoading(true);
@@ -342,6 +377,7 @@ function MainComponent() {
     }
   };
 
+  // Fetch TV details
   const fetchTVDetails = async (id) => {
     try {
       const response = await fetch(
@@ -383,6 +419,7 @@ function MainComponent() {
     }
   };
   
+  // Fetch movie details
   const fetchMovieDetails = async (id) => {
     try {
       const response = await fetch(
@@ -409,6 +446,7 @@ function MainComponent() {
     }
   };
 
+  // Fetch season episodes
   const fetchSeasonEpisodes = async (id, seasonNumber) => {
     try {
       console.log(`Fetching episodes for season ${seasonNumber}`);
@@ -442,6 +480,7 @@ function MainComponent() {
     }
   };
 
+  // Get streaming URL
   const getStreamingUrl = (content) => {
     if (!content?.id) return "";
 
@@ -453,6 +492,7 @@ function MainComponent() {
     }
   };
 
+  // Handle content selection
   const handleContentSelection = async (content) => {
     // Set to null first to ensure re-rendering
     setSelectedContent(null);
@@ -474,12 +514,14 @@ function MainComponent() {
     }, 100);
   };
 
+  // Handle return to home
   const handleReturnHome = () => {
     setSelectedContent(null);
     setSearchQuery("");
     setSearchResults([]);
   };
 
+  // Handle content type change
   const handleContentTypeChange = (type) => {
     setContentType(type);
     setSelectedContent(null);
@@ -487,6 +529,7 @@ function MainComponent() {
     setSearchResults([]);
   };
 
+  // Handle region change
   const handleRegionChange = (code) => {
     const newRegion = REGIONS.find(r => r.code === code) || REGIONS[0];
     setSelectedRegion(newRegion);
@@ -530,32 +573,69 @@ function MainComponent() {
     );
   }
 
+  // Content card component to reduce repetition
+  const ContentCard = ({ item, index, refCallback = null }) => (
+    <div
+      key={`content-${item.id}`}
+      ref={refCallback}
+      className="bg-[#161616] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg"
+      onClick={() => handleContentSelection(item)}
+    >
+      {item.poster_path ? (
+        <img
+          src={item.poster_path}
+          alt={item.title}
+          className="w-full aspect-[2/3] object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-full aspect-[2/3] bg-gray-800 flex items-center justify-center">
+          <span className="text-sm text-gray-500">No Image</span>
+        </div>
+      )}
+      <div className="p-2">
+        <h3 className="font-medium text-sm truncate">{item.title}</h3>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
+          <span className="text-xs bg-purple-500 px-2 py-0.5 rounded-sm">
+            {item.score?.toFixed(1) || "N/A"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
   const getCurrentContent = () => {
     switch (contentType) {
       case CONTENT_TYPES.ANIME:
         return {
           trending: trendingAnime,
-          popular: popularAnime
+          popular: popularAnime,
+          newArrivals: newArrivalsAnime
         };
       case CONTENT_TYPES.MOVIE:
         return {
           trending: trendingMovies,
-          popular: popularMovies
+          popular: popularMovies,
+          newArrivals: newArrivalsMovies
         };
       case CONTENT_TYPES.TV:
         return {
           trending: trendingTV,
-          popular: popularTV
+          popular: popularTV,
+          newArrivals: newArrivalsTV
         };
       case CONTENT_TYPES.REGIONAL:
         return {
           trending: trendingHindi,
-          popular: hindiContent
+          popular: hindiContent,
+          newArrivals: newArrivalsHindi
         };
       default:
         return {
           trending: [],
-          popular: []
+          popular: [],
+          newArrivals: []
         };
     }
   };
@@ -888,33 +968,7 @@ function MainComponent() {
               <h2 className="text-2xl font-bold mb-6 text-white">Trending</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {currentContent.trending.map((item) => (
-                  <div
-                    key={`trending-${item.id}`}
-                    className="bg-[#161616] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg"
-                    onClick={() => handleContentSelection(item)}
-                  >
-                    {item.poster_path ? (
-                      <img
-                        src={item.poster_path}
-                        alt={item.title}
-                        className="w-full aspect-[2/3] object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[2/3] bg-gray-800 flex items-center justify-center">
-                        <span className="text-sm text-gray-500">No Image</span>
-                      </div>
-                    )}
-                    <div className="p-2">
-                      <h3 className="font-medium text-sm truncate">{item.title}</h3>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
-                        <span className="text-xs bg-purple-500 px-2 py-0.5 rounded-sm">
-                          {item.score?.toFixed(1) || "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <ContentCard key={`trending-${item.id}`} item={item} />
                 ))}
               </div>
             </section>
@@ -923,34 +977,11 @@ function MainComponent() {
               <h2 className="text-2xl font-bold mb-6 text-white">Popular</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {currentContent.popular.map((item, index) => (
-                  <div
-                    key={`popular-${item.id}`}
-                    ref={index === currentContent.popular.length - 5 ? lastElementRef : null}
-                    className="bg-[#161616] rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-300 shadow-lg"
-                    onClick={() => handleContentSelection(item)}
-                  >
-                    {item.poster_path ? (
-                      <img
-                        src={item.poster_path}
-                        alt={item.title}
-                        className="w-full aspect-[2/3] object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[2/3] bg-gray-800 flex items-center justify-center">
-                        <span className="text-sm text-gray-500">No Image</span>
-                      </div>
-                    )}
-                    <div className="p-2">
-                      <h3 className="font-medium text-sm truncate">{item.title}</h3>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-400">{item.year || "N/A"}</span>
-                        <span className="text-xs bg-purple-500 px-2 py-0.5 rounded-sm">
-                          {item.score?.toFixed(1) || "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <ContentCard 
+                    key={`popular-${item.id}`} 
+                    item={item} 
+                    refCallback={index === currentContent.popular.length - 5 ? lastElementRef : null}
+                  />
                 ))}
               </div>
 
@@ -959,6 +990,15 @@ function MainComponent() {
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
                 </div>
               )}
+            </section>
+
+            <section className="mb-10">
+              <h2 className="text-2xl font-bold mb-6 text-white">New Arrivals</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {currentContent.newArrivals.map((item) => (
+                  <ContentCard key={`new-${item.id}`} item={item} />
+                ))}
+              </div>
             </section>
           </>
         )}
