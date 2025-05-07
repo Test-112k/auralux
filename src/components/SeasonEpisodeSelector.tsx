@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TMDB_API_KEY, TMDB_API_BASE } from '../lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
@@ -188,36 +189,8 @@ const SeasonEpisodeSelector = ({
     }
   }, [onEpisodeChange, selectedEpisode]);
 
-  // Memoize season items to prevent re-rendering
-  const seasonItems = useMemo(() => {
-    return seasons.map((season) => (
-      <SelectItem 
-        key={season.season_number} 
-        value={season.season_number.toString()}
-        className="text-white hover:bg-purple-700 hover:text-white focus:bg-purple-700 focus:text-white"
-      >
-        Season {season.season_number} ({season.episode_count} episodes)
-      </SelectItem>
-    ));
-  }, [seasons]);
-
-  // Memoize episode items to prevent re-rendering
-  const episodeItems = useMemo(() => {
-    return episodes.map((episode) => (
-      <SelectItem 
-        key={episode.episode_number} 
-        value={episode.episode_number.toString()}
-        className="text-white hover:bg-purple-700 hover:text-white focus:bg-purple-700 focus:text-white"
-      >
-        Episode {episode.episode_number}: {episode.name}
-      </SelectItem>
-    ));
-  }, [episodes]);
-
   // Handle season change with immediate response
-  const handleSeasonChange = useCallback((value: string) => {
-    const season = parseInt(value);
-    
+  const handleSeasonChange = useCallback((season: number) => {
     // Update season in parent component immediately
     onSeasonChange(season);
     
@@ -243,43 +216,28 @@ const SeasonEpisodeSelector = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-4 items-center">
+      <div className="flex flex-col gap-4">
+        {/* Season Buttons */}
         {seasons.length > 0 && (
-          <div className="relative">
-            <Select
-              value={selectedSeason.toString()}
-              onValueChange={handleSeasonChange}
-              disabled={loading}
-            >
-              <SelectTrigger 
-                className="w-[180px] bg-[#2D1B69] hover:bg-[#3D2B79] text-white border-[#6E59A5] transition-all duration-300 animate-scale-in focus:ring-[#9B87F5] shadow-md shadow-purple-900/30"
+          <div className="flex flex-wrap gap-2">
+            {seasons.map((season) => (
+              <Button
+                key={season.season_number}
+                variant={selectedSeason === season.season_number ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleSeasonChange(season.season_number)}
+                className={`transition-all ${selectedSeason === season.season_number 
+                  ? 'bg-purple-700 hover:bg-purple-800 text-white shadow-md shadow-purple-900/30' 
+                  : 'border-purple-700 hover:bg-purple-700 hover:text-white text-gray-300'}`}
+                disabled={loading}
               >
-                <SelectValue placeholder="Select Season">
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <span>Loading...</span>
-                    </div>
-                  ) : (
-                    `Season ${selectedSeason}`
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent 
-                className="bg-[#1A1F2C] border-[#6E59A5] text-white animate-scale-in z-50 max-h-[300px] shadow-lg shadow-purple-900/20"
-              >
-                <ScrollArea className="h-[200px]">
-                  {seasonItems}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-            {loading && (
-              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-              </div>
-            )}
+                Season {season.season_number}
+              </Button>
+            ))}
           </div>
         )}
 
+        {/* Episode Dropdown (Keep as is) */}
         {episodes.length > 0 && (
           <div className="relative">
             <Select
@@ -304,7 +262,15 @@ const SeasonEpisodeSelector = ({
                 className="bg-[#1A1F2C] border-[#6E59A5] text-white animate-scale-in z-50 max-h-[300px] shadow-lg shadow-purple-900/20"
               >
                 <ScrollArea className="h-[250px]">
-                  {episodeItems}
+                  {episodes.map((episode) => (
+                    <SelectItem 
+                      key={episode.episode_number} 
+                      value={episode.episode_number.toString()}
+                      className="text-white hover:bg-purple-700 hover:text-white focus:bg-purple-700 focus:text-white"
+                    >
+                      Episode {episode.episode_number}: {episode.name}
+                    </SelectItem>
+                  ))}
                 </ScrollArea>
               </SelectContent>
             </Select>
