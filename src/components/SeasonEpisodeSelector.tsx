@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TMDB_API_KEY, TMDB_API_BASE } from '../lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,8 +41,10 @@ const SeasonEpisodeSelector = ({
   const [fetchingEpisodes, setFetchingEpisodes] = useState<boolean>(false);
   const { toast } = useToast();
   
-  // Use local state for UI updates, but leverage global cache
-  const [episodeCache, setEpisodeCache] = useState<Record<number, Episode[]>>({});
+  // Improved memoization for episode handling
+  const episodeCacheKey = useMemo(() => 
+    contentId ? `${contentId}-${selectedSeason}` : '',
+  [contentId, selectedSeason]);
 
   // Fetch TV details when contentId changes
   useEffect(() => {
@@ -86,16 +89,16 @@ const SeasonEpisodeSelector = ({
           // Update parent component with season number if different
           if (seasonToFetch !== selectedSeason) {
             onSeasonChange(seasonToFetch);
-          } 
+          }
           
-          // Check if we already have episodes for this season in the cache
+          // Only fetch episodes if they're not in cache
           const cacheKey = `${contentId}-${seasonToFetch}`;
           if (globalEpisodeCache[cacheKey]) {
             setEpisodes(globalEpisodeCache[cacheKey]);
             setLoading(false);
           } else {
-            // Fetch episodes for the current season
-            await fetchSeasonEpisodes(contentId, seasonToFetch);
+            // Fetch episodes but don't block UI
+            fetchSeasonEpisodes(contentId, seasonToFetch);
           }
         } else {
           setEpisodes([]);
@@ -115,7 +118,7 @@ const SeasonEpisodeSelector = ({
     };
   }, [contentId]);
 
-  // Optimized fetchSeasonEpisodes with improved caching and debounce
+  // Optimized fetchSeasonEpisodes function with better error handling
   const fetchSeasonEpisodes = useCallback(async (id: number, seasonNumber: number) => {
     const cacheKey = `${id}-${seasonNumber}`;
     
@@ -126,7 +129,10 @@ const SeasonEpisodeSelector = ({
       setLoading(false);
       
       // Check if current episode exists in this season
-      const episodeExists = globalEpisodeCache[cacheKey].some((ep: any) => ep.episode_number === selectedEpisode);
+      const episodeExists = globalEpisodeCache[cacheKey].some(
+        (ep: any) => ep.episode_number === selectedEpisode
+      );
+      
       if (!episodeExists) {
         onEpisodeChange(1);
       }
@@ -138,7 +144,7 @@ const SeasonEpisodeSelector = ({
       setFetchingEpisodes(true);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout (reduced from 10s)
       
       const response = await fetch(
         `${TMDB_API_BASE}/tv/${id}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`,
@@ -163,17 +169,15 @@ const SeasonEpisodeSelector = ({
       const data = await response.json();
       
       if (data.episodes && data.episodes.length > 0) {
-        // Update both local and global cache
+        // Update cache
         globalEpisodeCache[cacheKey] = data.episodes;
-        setEpisodeCache(prev => ({
-          ...prev,
-          [seasonNumber]: data.episodes
-        }));
-        
         setEpisodes(data.episodes);
         
         // If the current episode doesn't exist in this season, set to episode 1
-        const episodeExists = data.episodes.some((ep: any) => ep.episode_number === selectedEpisode);
+        const episodeExists = data.episodes.some(
+          (ep: any) => ep.episode_number === selectedEpisode
+        );
+        
         if (!episodeExists) {
           onEpisodeChange(1);
         }
@@ -189,16 +193,38 @@ const SeasonEpisodeSelector = ({
     }
   }, [onEpisodeChange, selectedEpisode]);
 
-  // Handle season change with immediate response
+  // Optimized season change handler
   const handleSeasonChange = useCallback((season: number) => {
-    // Update season in parent component immediately
+    if (season === selectedSeason) return; // Avoid unnecessary updates
+    
+    // Update parent component immediately
     onSeasonChange(season);
     
-    // Explicitly fetch episodes for the new season
+    // Fetch episodes if needed (with debounce protection)
     if (contentId && season > 0) {
-      fetchSeasonEpisodes(contentId, season);
+      // Check if episodes are already cached
+      const cacheKey = `${contentId}-${season}`;
+      if (globalEpisodeCache[cacheKey]) {
+        setEpisodes(globalEpisodeCache[cacheKey]);
+        
+        // Check episode validity
+        const validEpisode = globalEpisodeCache[cacheKey].some(
+          (ep) => ep.episode_number === selectedEpisode
+        );
+        
+        if (!validEpisode) {
+          onEpisodeChange(1);
+        }
+      } else {
+        // Set a loading state to give feedback
+        setFetchingEpisodes(true);
+        // Use setTimeout for a smoother UI experience
+        setTimeout(() => {
+          fetchSeasonEpisodes(contentId, season);
+        }, 50);
+      }
     }
-  }, [contentId, fetchSeasonEpisodes, onSeasonChange]);
+  }, [contentId, fetchSeasonEpisodes, onEpisodeChange, onSeasonChange, selectedEpisode, selectedSeason]);
 
   const handleEpisodeChange = useCallback((value: string) => {
     const episode = parseInt(value);
@@ -217,7 +243,7 @@ const SeasonEpisodeSelector = ({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4">
-        {/* Season Buttons */}
+        {/* Season Buttons - Optimized rendering */}
         {seasons.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {seasons.map((season) => (
@@ -229,7 +255,7 @@ const SeasonEpisodeSelector = ({
                 className={`transition-all ${selectedSeason === season.season_number 
                   ? 'bg-purple-700 hover:bg-purple-800 text-white shadow-md shadow-purple-900/30' 
                   : 'border-purple-700 hover:bg-purple-700 hover:text-white text-gray-300'}`}
-                disabled={loading}
+                disabled={fetchingEpisodes}
               >
                 Season {season.season_number}
               </Button>
@@ -237,7 +263,7 @@ const SeasonEpisodeSelector = ({
           </div>
         )}
 
-        {/* Episode Dropdown (Keep as is) */}
+        {/* Episode Dropdown */}
         {episodes.length > 0 && (
           <div className="relative">
             <Select
