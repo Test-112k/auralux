@@ -38,7 +38,6 @@ const SeasonEpisodeSelector = ({
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchingEpisodes, setFetchingEpisodes] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Use local state for UI updates, but leverage global cache
@@ -53,7 +52,6 @@ const SeasonEpisodeSelector = ({
     const fetchTVDetails = async () => {
       try {
         setLoading(true);
-        setError(null);
         
         console.log(`Fetching TV details for content ID: ${contentId}`);
         const response = await fetch(
@@ -65,7 +63,9 @@ const SeasonEpisodeSelector = ({
         );
         
         if (!response.ok) {
-          throw new Error("Failed to fetch TV details");
+          console.log("Failed to fetch TV details");
+          setLoading(false);
+          return;
         }
         
         const data = await response.json();
@@ -109,12 +109,6 @@ const SeasonEpisodeSelector = ({
       } catch (error: any) {
         if (error.name !== 'AbortError') {
           console.error("Error fetching TV details:", error);
-          setError("Failed to load TV details");
-          toast({
-            title: "Error loading TV details",
-            description: "Please try again later",
-            variant: "destructive",
-          });
           setLoading(false);
         }
       }
@@ -151,7 +145,6 @@ const SeasonEpisodeSelector = ({
     try {
       console.log(`Fetching episodes for season ${seasonNumber}`);
       setFetchingEpisodes(true);
-      setError(null);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
@@ -171,7 +164,10 @@ const SeasonEpisodeSelector = ({
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        throw new Error("Failed to fetch season episodes");
+        console.log("Failed to fetch season episodes");
+        setFetchingEpisodes(false);
+        setLoading(false);
+        return;
       }
       
       const data = await response.json();
@@ -198,12 +194,6 @@ const SeasonEpisodeSelector = ({
       }
     } catch (error) {
       console.error("Error fetching season episodes:", error);
-      setError("Failed to load episodes");
-      toast({
-        title: "Error loading episodes",
-        description: "Please try again later",
-        variant: "destructive",
-      });
     } finally {
       setFetchingEpisodes(false);
       setLoading(false);
@@ -255,10 +245,6 @@ const SeasonEpisodeSelector = ({
         <span>Loading seasons...</span>
       </div>
     );
-  }
-
-  if (error && seasons.length === 0) {
-    return <div className="text-red-500 text-sm">{error}</div>;
   }
 
   return (

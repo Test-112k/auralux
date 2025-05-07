@@ -125,8 +125,6 @@ const ContentViewer = ({
               title={selectedContent.title} 
               loading={loading} 
             />
-            
-            {/* Removed duplicate message box */}
           </div>
 
           {selectedContent.media_type === "tv" && episodes.length > 0 && (
