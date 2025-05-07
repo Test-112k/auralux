@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -178,20 +177,23 @@ function MainComponent() {
       setLoading(true);
       
       if (contentType === CONTENT_TYPES.ANIME) {
-        // Get trending anime - make sure it's from Japan and has animation genre
-        // Using airing today and on the air to get more recent shows
+        // Get trending anime - use currently airing anime for better recency
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/tv/on_the_air?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&page=1`
+          `${TMDB_API_BASE}/tv/airing_today?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&page=1`
         );
         
-        // Get popular anime - also ensure it's from Japan but sort by newest first
+        // Get popular anime - ensure it's from Japan with animation genre
         const popularResponse = await fetch(
           `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc&page=1`
         );
         
-        // Get new arrivals - ensure it's anime from Japan with most recent first
+        // Get new arrivals - anime from Japan with most recent first, limit to last 2 years for freshness
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        const twoYearsAgoStr = twoYearsAgo.toISOString().split('T')[0];
+        
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.gte=${twoYearsAgoStr}&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -204,17 +206,24 @@ function MainComponent() {
 
         // Filter out shows with null or empty posters for better UI experience
         const filterValidShows = (shows) => shows.filter(show => show.poster_path);
+        
+        // Double-check that we're getting anime (genre 16) and from Japan
+        const filterAnime = (shows) => shows.filter(show => {
+          const hasAnimation = show.genre_ids && show.genre_ids.includes(16);
+          const isJapanese = show.origin_country && show.origin_country.includes("JP");
+          return hasAnimation && isJapanese;
+        });
 
         // Add anime tag to make it clear these are anime
-        setTrendingAnime(formatContentData(filterValidShows(trendingData.results), "tv").map(item => ({...item, isAnime: true})));
-        setPopularAnime(formatContentData(filterValidShows(popularData.results), "tv").map(item => ({...item, isAnime: true})));
-        setNewArrivalsAnime(formatContentData(filterValidShows(newArrivalsData.results), "tv").map(item => ({...item, isAnime: true})));
+        setTrendingAnime(formatContentData(filterAnime(filterValidShows(trendingData.results)), "tv").map(item => ({...item, isAnime: true})));
+        setPopularAnime(formatContentData(filterAnime(filterValidShows(popularData.results)), "tv").map(item => ({...item, isAnime: true})));
+        setNewArrivalsAnime(formatContentData(filterAnime(filterValidShows(newArrivalsData.results)), "tv").map(item => ({...item, isAnime: true})));
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.MOVIE) {
-        // Get trending movies (last 7 days)
+        // Get trending movies - prioritize current week for true trending
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/trending/movie/week?api_key=${TMDB_API_KEY}`
+          `${TMDB_API_BASE}/trending/movie/day?api_key=${TMDB_API_KEY}`
         );
         
         // Get popular movies (overall popularity)
@@ -241,19 +250,19 @@ function MainComponent() {
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.TV) {
-        // Get trending TV - exclude animation genre to avoid anime
+        // Get trending TV - updated to use daily trending for recency, exclude animation genre
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/trending/tv/week?api_key=${TMDB_API_KEY}&without_genres=16`
+          `${TMDB_API_BASE}/trending/tv/day?api_key=${TMDB_API_KEY}`
         );
         
-        // Get popular TV - exclude animation genre
+        // Get popular TV - exclude animation genre to avoid anime
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16`
+          `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}`
         );
         
         // Get new arrivals - exclude animation genre
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&without_genres=16&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -264,9 +273,15 @@ function MainComponent() {
         const popularData = await popularResponse.json();
         const newArrivalsData = await newArrivalsResponse.json();
 
-        setTrendingTV(formatContentData(trendingData.results, "tv"));
-        setPopularTV(formatContentData(popularData.results, "tv"));
-        setNewArrivalsTV(formatContentData(newArrivalsData.results, "tv"));
+        // Filter out animation genre (16) to avoid showing anime in TV section
+        const filterNonAnime = (shows) => shows.filter(show => 
+          !(show.genre_ids && show.genre_ids.includes(16) && 
+            show.origin_country && show.origin_country.includes("JP"))
+        );
+
+        setTrendingTV(formatContentData(filterNonAnime(trendingData.results), "tv"));
+        setPopularTV(formatContentData(filterNonAnime(popularData.results), "tv"));
+        setNewArrivalsTV(formatContentData(filterNonAnime(newArrivalsData.results), "tv"));
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.REGIONAL) {
@@ -336,7 +351,7 @@ function MainComponent() {
     }));
   };
 
-  // Search content
+  // Search content - update to ensure anime search respects genre filter
   const searchContent = async () => {
     try {
       setLoading(true);
@@ -362,7 +377,18 @@ function MainComponent() {
       
       const data = await response.json();
       const mediaType = contentType === CONTENT_TYPES.MOVIE || contentType === CONTENT_TYPES.REGIONAL ? "movie" : "tv";
-      const formattedResults = formatContentData(data.results, mediaType);
+      
+      // For anime, ensure we're only including actual anime
+      let results = data.results;
+      if (contentType === CONTENT_TYPES.ANIME) {
+        results = results.filter(show => {
+          const hasAnimation = show.genre_ids && show.genre_ids.includes(16);
+          const isJapanese = show.origin_country && show.origin_country.includes("JP");
+          return hasAnimation && isJapanese;
+        });
+      }
+      
+      const formattedResults = formatContentData(results, mediaType);
       
       // If there are too many results, suggest moving to search page
       if (data.total_results > 20) {
