@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TMDB_API_KEY, TMDB_API_BASE } from '../lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -53,7 +52,6 @@ const SeasonEpisodeSelector = ({
       try {
         setLoading(true);
         
-        console.log(`Fetching TV details for content ID: ${contentId}`);
         const response = await fetch(
           `${TMDB_API_BASE}/tv/${contentId}?api_key=${TMDB_API_KEY}&language=en-US`,
           { 
@@ -63,13 +61,11 @@ const SeasonEpisodeSelector = ({
         );
         
         if (!response.ok) {
-          console.log("Failed to fetch TV details");
           setLoading(false);
           return;
         }
         
         const data = await response.json();
-        console.log("TV details:", data);
 
         // Filter out seasons with no episodes or special seasons (like season 0)
         const validSeasons = data.seasons.filter(
@@ -88,14 +84,12 @@ const SeasonEpisodeSelector = ({
           
           // Update parent component with season number if different
           if (seasonToFetch !== selectedSeason) {
-            console.log(`Selected season ${selectedSeason} not found, using season ${seasonToFetch} instead`);
             onSeasonChange(seasonToFetch);
           } 
           
           // Check if we already have episodes for this season in the cache
           const cacheKey = `${contentId}-${seasonToFetch}`;
           if (globalEpisodeCache[cacheKey]) {
-            console.log(`Using cached episodes for season ${seasonToFetch}`);
             setEpisodes(globalEpisodeCache[cacheKey]);
             setLoading(false);
           } else {
@@ -108,7 +102,6 @@ const SeasonEpisodeSelector = ({
         }
       } catch (error: any) {
         if (error.name !== 'AbortError') {
-          console.error("Error fetching TV details:", error);
           setLoading(false);
         }
       }
@@ -127,7 +120,6 @@ const SeasonEpisodeSelector = ({
     
     // Check global cache first
     if (globalEpisodeCache[cacheKey]) {
-      console.log(`Using global cached episodes for season ${seasonNumber}`);
       setEpisodes(globalEpisodeCache[cacheKey]);
       setFetchingEpisodes(false);
       setLoading(false);
@@ -135,7 +127,6 @@ const SeasonEpisodeSelector = ({
       // Check if current episode exists in this season
       const episodeExists = globalEpisodeCache[cacheKey].some((ep: any) => ep.episode_number === selectedEpisode);
       if (!episodeExists) {
-        console.log(`Episode ${selectedEpisode} not found in season ${seasonNumber}, resetting to episode 1`);
         onEpisodeChange(1);
       }
       
@@ -143,7 +134,6 @@ const SeasonEpisodeSelector = ({
     }
     
     try {
-      console.log(`Fetching episodes for season ${seasonNumber}`);
       setFetchingEpisodes(true);
       
       const controller = new AbortController();
@@ -164,7 +154,6 @@ const SeasonEpisodeSelector = ({
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        console.log("Failed to fetch season episodes");
         setFetchingEpisodes(false);
         setLoading(false);
         return;
@@ -185,7 +174,6 @@ const SeasonEpisodeSelector = ({
         // If the current episode doesn't exist in this season, set to episode 1
         const episodeExists = data.episodes.some((ep: any) => ep.episode_number === selectedEpisode);
         if (!episodeExists) {
-          console.log(`Episode ${selectedEpisode} not found in season ${seasonNumber}, resetting to episode 1`);
           onEpisodeChange(1);
         }
       } else {
@@ -193,7 +181,7 @@ const SeasonEpisodeSelector = ({
         onEpisodeChange(1);
       }
     } catch (error) {
-      console.error("Error fetching season episodes:", error);
+      // Handle error silently
     } finally {
       setFetchingEpisodes(false);
       setLoading(false);
@@ -203,7 +191,11 @@ const SeasonEpisodeSelector = ({
   // Memoize season items to prevent re-rendering
   const seasonItems = useMemo(() => {
     return seasons.map((season) => (
-      <SelectItem key={season.season_number} value={season.season_number.toString()}>
+      <SelectItem 
+        key={season.season_number} 
+        value={season.season_number.toString()}
+        className="text-white hover:bg-purple-700 hover:text-white focus:bg-purple-700 focus:text-white"
+      >
         Season {season.season_number} ({season.episode_count} episodes)
       </SelectItem>
     ));
@@ -212,7 +204,11 @@ const SeasonEpisodeSelector = ({
   // Memoize episode items to prevent re-rendering
   const episodeItems = useMemo(() => {
     return episodes.map((episode) => (
-      <SelectItem key={episode.episode_number} value={episode.episode_number.toString()}>
+      <SelectItem 
+        key={episode.episode_number} 
+        value={episode.episode_number.toString()}
+        className="text-white hover:bg-purple-700 hover:text-white focus:bg-purple-700 focus:text-white"
+      >
         Episode {episode.episode_number}: {episode.name}
       </SelectItem>
     ));
@@ -221,7 +217,6 @@ const SeasonEpisodeSelector = ({
   // Handle season change with immediate response
   const handleSeasonChange = useCallback((value: string) => {
     const season = parseInt(value);
-    console.log(`Season selected: ${season}`);
     
     // Update season in parent component immediately
     onSeasonChange(season);
@@ -234,7 +229,6 @@ const SeasonEpisodeSelector = ({
 
   const handleEpisodeChange = useCallback((value: string) => {
     const episode = parseInt(value);
-    console.log(`Episode selected: ${episode}`);
     onEpisodeChange(episode);
   }, [onEpisodeChange]);
 
@@ -271,7 +265,7 @@ const SeasonEpisodeSelector = ({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent 
-                className="bg-[#1A1F2C] border-[#6E59A5] animate-scale-in z-50 max-h-[300px] shadow-lg shadow-purple-900/20"
+                className="bg-[#1A1F2C] border-[#6E59A5] text-white animate-scale-in z-50 max-h-[300px] shadow-lg shadow-purple-900/20"
               >
                 <ScrollArea className="h-[200px]">
                   {seasonItems}
@@ -307,7 +301,7 @@ const SeasonEpisodeSelector = ({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent 
-                className="bg-[#1A1F2C] border-[#6E59A5] animate-scale-in z-50 max-h-[300px] shadow-lg shadow-purple-900/20"
+                className="bg-[#1A1F2C] border-[#6E59A5] text-white animate-scale-in z-50 max-h-[300px] shadow-lg shadow-purple-900/20"
               >
                 <ScrollArea className="h-[250px]">
                   {episodeItems}

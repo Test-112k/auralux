@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,13 +49,11 @@ const ContentViewer = ({
 
   // Memoized handlers to prevent unnecessary re-renders
   const handleSeasonChange = useCallback((seasonNumber: number) => {
-    console.log(`Season changed to ${seasonNumber}`);
     setSelectedSeason(seasonNumber);
   }, [setSelectedSeason]);
 
   // Handle episode change
   const handleEpisodeChange = useCallback((episodeNumber: number) => {
-    console.log(`Episode changed to ${episodeNumber}`);
     setSelectedEpisode(episodeNumber);
   }, [setSelectedEpisode]);
 
@@ -104,8 +101,8 @@ const ContentViewer = ({
                 <SelectTrigger className="w-[180px] bg-purple-950 hover:bg-purple-800 text-white border-purple-700 transition-all duration-300">
                   <SelectValue placeholder="Select Server" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-purple-700 z-50">
-                  <SelectItem value="vidsrc">Server 1</SelectItem>
+                <SelectContent className="bg-[#1A1A1A] border-purple-700 z-50 text-white">
+                  <SelectItem value="vidsrc" className="text-white hover:bg-purple-700 hover:text-white">Server 1</SelectItem>
                 </SelectContent>
               </Select>
 
