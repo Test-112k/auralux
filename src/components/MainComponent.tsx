@@ -122,11 +122,11 @@ function MainComponent() {
       let setter;
       
       // Common parameter to exclude adult content
-      const excludeAdultContent = "&include_adult=false";
+      const excludeAdultContent = "&include_adult=false&certification.lte=PG-13";
       
       switch(contentType) {
         case CONTENT_TYPES.ANIME:
-          endpoint = `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc${excludeAdultContent}&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=${nextPage}`;
           setter = setPopularAnime;
           break;
         case CONTENT_TYPES.MOVIE:
@@ -183,9 +183,9 @@ function MainComponent() {
       const excludeAdultContent = "&include_adult=false&certification.lte=PG-13";
       
       if (contentType === CONTENT_TYPES.ANIME) {
-        // Get trending anime - use currently airing anime for better recency
+        // For anime trending, we'll use a discover endpoint with better filters since airing_today doesn't work well
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/tv/airing_today?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
         
         // Get popular anime - ensure it's from Japan with animation genre
@@ -209,6 +209,8 @@ function MainComponent() {
         const trendingData = await trendingResponse.json();
         const popularData = await popularResponse.json();
         const newArrivalsData = await newArrivalsResponse.json();
+
+        console.log("Anime trending data:", trendingData);
 
         // Filter out shows with null or empty posters for better UI experience
         const filterValidShows = (shows) => shows.filter(show => show.poster_path);
