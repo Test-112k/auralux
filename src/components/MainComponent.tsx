@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -178,16 +179,17 @@ function MainComponent() {
       
       if (contentType === CONTENT_TYPES.ANIME) {
         // Get trending anime - make sure it's from Japan and has animation genre
+        // Using airing today and on the air to get more recent shows
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc&page=1`
+          `${TMDB_API_BASE}/tv/on_the_air?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&page=1`
         );
         
-        // Get popular anime - also ensure it's from Japan
+        // Get popular anime - also ensure it's from Japan but sort by newest first
         const popularResponse = await fetch(
           `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc&page=1`
         );
         
-        // Get new arrivals - ensure it's anime from Japan
+        // Get new arrivals - ensure it's anime from Japan with most recent first
         const newArrivalsResponse = await fetch(
           `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}&page=1`
         );
@@ -200,10 +202,13 @@ function MainComponent() {
         const popularData = await popularResponse.json();
         const newArrivalsData = await newArrivalsResponse.json();
 
+        // Filter out shows with null or empty posters for better UI experience
+        const filterValidShows = (shows) => shows.filter(show => show.poster_path);
+
         // Add anime tag to make it clear these are anime
-        setTrendingAnime(formatContentData(trendingData.results, "tv").map(item => ({...item, isAnime: true})));
-        setPopularAnime(formatContentData(popularData.results, "tv").map(item => ({...item, isAnime: true})));
-        setNewArrivalsAnime(formatContentData(newArrivalsData.results, "tv").map(item => ({...item, isAnime: true})));
+        setTrendingAnime(formatContentData(filterValidShows(trendingData.results), "tv").map(item => ({...item, isAnime: true})));
+        setPopularAnime(formatContentData(filterValidShows(popularData.results), "tv").map(item => ({...item, isAnime: true})));
+        setNewArrivalsAnime(formatContentData(filterValidShows(newArrivalsData.results), "tv").map(item => ({...item, isAnime: true})));
         
         setHasMore(popularData.page < popularData.total_pages);
       } else if (contentType === CONTENT_TYPES.MOVIE) {
