@@ -574,7 +574,7 @@ function MainComponent() {
   }
 
   // Content card component to reduce repetition
-  const ContentCard = ({ item, index, refCallback = null }) => (
+  const ContentCard = ({ item, index, refCallback = null }: { item: any; index: any; refCallback?: any }) => (
     <div
       key={`content-${item.id}`}
       ref={refCallback}
@@ -967,8 +967,8 @@ function MainComponent() {
             <section className="mb-10">
               <h2 className="text-2xl font-bold mb-6 text-white">Trending</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {currentContent.trending.map((item) => (
-                  <ContentCard key={`trending-${item.id}`} item={item} />
+                {currentContent.trending.map((item, index) => (
+                  <ContentCard key={`trending-${item.id}`} item={item} index={index} />
                 ))}
               </div>
             </section>
@@ -980,6 +980,7 @@ function MainComponent() {
                   <ContentCard 
                     key={`popular-${item.id}`} 
                     item={item} 
+                    index={index}
                     refCallback={index === currentContent.popular.length - 5 ? lastElementRef : null}
                   />
                 ))}
@@ -995,8 +996,8 @@ function MainComponent() {
             <section className="mb-10">
               <h2 className="text-2xl font-bold mb-6 text-white">New Arrivals</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {currentContent.newArrivals.map((item) => (
-                  <ContentCard key={`new-${item.id}`} item={item} />
+                {currentContent.newArrivals.map((item, index) => (
+                  <ContentCard key={`new-${item.id}`} item={item} index={index} />
                 ))}
               </div>
             </section>
