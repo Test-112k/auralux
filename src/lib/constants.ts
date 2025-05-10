@@ -1,7 +1,7 @@
-
-// Using a placeholder API key directly in the code since import.meta.env.VITE_TMDB_API_KEY is undefined
+// Using a bearer token for TMDB API authentication instead of API key
 // In a production environment, this would come from environment variables
 export const TMDB_API_KEY = "3e1dd25638249611e92a50203166e7a9";
+export const TMDB_API_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzZTFkZDI1NjM4MjQ5NjExZTkyYTUwMjAzMTY2ZTdhOSIsInN1YiI6IjYyMDUyNWVjZDNkMzg3MDAxZTExOThmYiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.XQXTWhAIeS6O1En4BRTJ3NLLlZ-540rE4p_v60K6-gY";
 export const TMDB_API_BASE = "https://api.themoviedb.org/3";
 
 export const VIDSRC_API_BASE = "https://vidsrc.to/ajax";
