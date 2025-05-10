@@ -1,23 +1,16 @@
-// Using a bearer token for TMDB API authentication instead of API key
-// In a production environment, this would come from environment variables
-export const TMDB_API_KEY = "3e1dd25638249611e92a50203166e7a9";
-export const TMDB_API_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzZTFkZDI1NjM4MjQ5NjExZTkyYTUwMjAzMTY2ZTdhOSIsInN1YiI6IjYyMDUyNWVjZDNkMzg3MDAxZTExOThmYiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.XQXTWhAIeS6O1En4BRTJ3NLLlZ-540rE4p_v60K6-gY";
+
+// API Keys and Base URLs
+export const TMDB_API_KEY = "54d82ce065f64ee04381a81d3bcc2455";
 export const TMDB_API_BASE = "https://api.themoviedb.org/3";
 
-export const VIDSRC_API_BASE = "https://vidsrc.to/ajax";
-
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
-// Streaming Servers
+// Streaming Servers with updated URLs
 export const STREAMING_SERVERS = {
   vidsrc: {
-    name: "VidSrc",
-    movieUrl: (tmdbId: string) =>
-      `https://vidsrc.to/embed/movie/${tmdbId}`,
-    tvUrl: (tmdbId: string, season: number, episode: number) =>
-      `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`,
-  },
-  // Add more servers here as needed
+    name: "Server 1",
+    movieUrl: (id: string) => `https://vidsrc.xyz/embed/movie/${id}`,
+    tvUrl: (id: string, season: number, episode: number) => 
+      `https://vidsrc.xyz/embed/tv/${id}/${season}-${episode}`
+  }
 };
 
 // Content Types
@@ -25,93 +18,46 @@ export const CONTENT_TYPES = {
   ANIME: "anime",
   MOVIE: "movie",
   TV: "tv",
-  REGIONAL: "regional",
+  REGIONAL: "regional"
 };
 
-// Regions
+// Available Regions - Extended list
 export const REGIONS = [
-  { name: "India", code: "IN", language: "hi", flag: "🇮🇳" },
-  { name: "Japan", code: "JP", language: "ja", flag: "🇯🇵" },
-  { name: "Korea", code: "KR", language: "ko", flag: "🇰🇷" },
-  { name: "China", code: "CN", language: "zh", flag: "🇨🇳" },
-  { name: "France", code: "FR", language: "fr", flag: "🇫🇷" },
-  { name: "Spain", code: "ES", language: "es", flag: "🇪🇸" },
-  { name: "Germany", code: "DE", language: "de", flag: "🇩🇪" },
-  { name: "Italy", code: "IT", language: "it", flag: "🇮🇹" },
-  { name: "Russia", code: "RU", language: "ru", flag: "🇷🇺" },
+  { code: "IN", name: "India", language: "hi", flag: "🇮🇳" },
+  { code: "JP", name: "Japan", language: "ja", flag: "🇯🇵" },
+  { code: "KR", name: "Korea", language: "ko", flag: "🇰🇷" },
+  { code: "CN", name: "China", language: "zh", flag: "🇨🇳" },
+  { code: "TH", name: "Thailand", language: "th", flag: "🇹🇭" },
+  { code: "FR", name: "France", language: "fr", flag: "🇫🇷" },
+  { code: "ES", name: "Spain", language: "es", flag: "🇪🇸" },
+  { code: "DE", name: "Germany", language: "de", flag: "🇩🇪" },
+  { code: "IT", name: "Italy", language: "it", flag: "🇮🇹" },
+  { code: "US", name: "United States", language: "en", flag: "🇺🇸" },
+  { code: "GB", name: "United Kingdom", language: "en", flag: "🇬🇧" },
+  { code: "CA", name: "Canada", language: "en", flag: "🇨🇦" },
+  { code: "AU", name: "Australia", language: "en", flag: "🇦🇺" },
+  { code: "BR", name: "Brazil", language: "pt", flag: "🇧🇷" },
+  { code: "MX", name: "Mexico", language: "es", flag: "🇲🇽" },
+  { code: "RU", name: "Russia", language: "ru", flag: "🇷🇺" },
+  { code: "TR", name: "Turkey", language: "tr", flag: "🇹🇷" },
+  { code: "ID", name: "Indonesia", language: "id", flag: "🇮🇩" },
+  { code: "MY", name: "Malaysia", language: "ms", flag: "🇲🇾" },
+  { code: "PH", name: "Philippines", language: "tl", flag: "🇵🇭" },
+  { code: "PK", name: "Pakistan", language: "ur", flag: "🇵🇰" },
+  { code: "SA", name: "Saudi Arabia", language: "ar", flag: "🇸🇦" },
+  { code: "AE", name: "United Arab Emirates", language: "ar", flag: "🇦🇪" },
+  { code: "IL", name: "Israel", language: "he", flag: "🇮🇱" },
+  { code: "EG", name: "Egypt", language: "ar", flag: "🇪🇬" },
+  { code: "NG", name: "Nigeria", language: "en", flag: "🇳🇬" },
+  { code: "ZA", name: "South Africa", language: "en", flag: "🇿🇦" }
 ];
 
-// Items per page
+// Pagination
 export const ITEMS_PER_PAGE = 20;
 
-// Genre type definition
-export interface GenreType {
-  id: number;
-  name: string;
-}
-
-// Genre categories
-export const ANIME_GENRES = [
-  { id: 0, name: "All" },
-  { id: 16, name: "Animation" },
-  { id: 10759, name: "Action & Adventure" },
-  { id: 10765, name: "Sci-Fi & Fantasy" },
-  { id: 35, name: "Comedy" },
-  { id: 18, name: "Drama" },
-  { id: 10768, name: "War & Politics" },
-  { id: 9648, name: "Mystery" },
-];
-
-export const MOVIE_GENRES = [
-  { id: 0, name: "All" },
-  { id: 28, name: "Action" },
-  { id: 12, name: "Adventure" },
-  { id: 16, name: "Animation" },
-  { id: 35, name: "Comedy" },
-  { id: 80, name: "Crime" },
-  { id: 99, name: "Documentary" },
-  { id: 18, name: "Drama" },
-  { id: 10751, name: "Family" },
-  { id: 14, name: "Fantasy" },
-  { id: 36, name: "History" },
-  { id: 27, name: "Horror" },
-  { id: 10402, name: "Music" },
-  { id: 9648, name: "Mystery" },
-  { id: 10749, name: "Romance" },
-  { id: 878, name: "Science Fiction" },
-  { id: 53, name: "Thriller" },
-  { id: 10752, name: "War" },
-  { id: 37, name: "Western" },
-];
-
-export const TV_GENRES = [
-  { id: 0, name: "All" },
-  { id: 10759, name: "Action & Adventure" },
-  { id: 16, name: "Animation" },
-  { id: 35, name: "Comedy" },
-  { id: 80, name: "Crime" },
-  { id: 99, name: "Documentary" },
-  { id: 18, name: "Drama" },
-  { id: 10751, name: "Family" },
-  { id: 10762, name: "Kids" },
-  { id: 9648, name: "Mystery" },
-  { id: 10763, name: "News" },
-  { id: 10764, name: "Reality" },
-  { id: 10765, name: "Sci-Fi & Fantasy" },
-  { id: 10766, name: "Soap" },
-  { id: 10767, name: "Talk" },
-  { id: 10768, name: "War & Politics" },
-  { id: 37, name: "Western" },
-];
-
-export const REGIONAL_GENRES = [
-  { id: 0, name: "All" },
-  { id: 28, name: "Action" },
-  { id: 12, name: "Adventure" },
-  { id: 35, name: "Comedy" },
-  { id: 18, name: "Drama" },
-  { id: 10749, name: "Romance" },
-  { id: 53, name: "Thriller" },
-  { id: 27, name: "Horror" },
-  { id: 14, name: "Fantasy" },
-];
+// Search API endpoints
+export const SEARCH_API = {
+  MOVIE: `${TMDB_API_BASE}/search/movie?api_key=${TMDB_API_KEY}&query=`,
+  TV: `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=`,
+  ANIME: `${TMDB_API_BASE}/search/tv?api_key=${TMDB_API_KEY}&query=`
+};

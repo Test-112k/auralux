@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowLeft, ArrowUp, Menu, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS, ANIME_GENRES, MOVIE_GENRES, TV_GENRES, REGIONAL_GENRES } from "../lib/constants";
+import { TMDB_API_KEY, TMDB_API_BASE, STREAMING_SERVERS, CONTENT_TYPES, ITEMS_PER_PAGE, REGIONS } from "../lib/constants";
 import RegionSelector from "./RegionSelector";
-import GenreSelector from "./GenreSelector";
 import ContentViewer from "./ContentViewer";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,12 +25,6 @@ function MainComponent() {
   const [contentType, setContentType] = useState(CONTENT_TYPES.ANIME);
   const [selectedRegion, setSelectedRegion] = useState(REGIONS[0]); // Default to first region (India)
   const [showRegionSelector, setShowRegionSelector] = useState(false);
-  
-  // Genre state
-  const [selectedAnimeGenre, setSelectedAnimeGenre] = useState(ANIME_GENRES[0]);
-  const [selectedMovieGenre, setSelectedMovieGenre] = useState(MOVIE_GENRES[0]);
-  const [selectedTVGenre, setSelectedTVGenre] = useState(TV_GENRES[0]);
-  const [selectedRegionalGenre, setSelectedRegionalGenre] = useState(REGIONAL_GENRES[0]);
   
   // Content lists
   const [trendingAnime, setTrendingAnime] = useState([]);
@@ -73,7 +66,7 @@ function MainComponent() {
   // Initial load
   useEffect(() => {
     fetchTrendingAndPopular();
-  }, [contentType, selectedRegion, selectedAnimeGenre, selectedMovieGenre, selectedTVGenre, selectedRegionalGenre]);
+  }, [contentType, selectedRegion]);
 
   // Search functionality
   useEffect(() => {
@@ -102,41 +95,7 @@ function MainComponent() {
   useEffect(() => {
     setPage(1);
     setHasMore(true);
-  }, [contentType, selectedRegion, selectedAnimeGenre, selectedMovieGenre, selectedTVGenre, selectedRegionalGenre]);
-
-  // Get current genre based on content type
-  const getCurrentGenre = () => {
-    switch(contentType) {
-      case CONTENT_TYPES.ANIME:
-        return selectedAnimeGenre;
-      case CONTENT_TYPES.MOVIE:
-        return selectedMovieGenre;
-      case CONTENT_TYPES.TV:
-        return selectedTVGenre;
-      case CONTENT_TYPES.REGIONAL:
-        return selectedRegionalGenre;
-      default:
-        return { id: 0, name: "All" };
-    }
-  };
-
-  // Handle genre change based on content type
-  const handleGenreChange = (genre) => {
-    switch(contentType) {
-      case CONTENT_TYPES.ANIME:
-        setSelectedAnimeGenre(genre);
-        break;
-      case CONTENT_TYPES.MOVIE:
-        setSelectedMovieGenre(genre);
-        break;
-      case CONTENT_TYPES.TV:
-        setSelectedTVGenre(genre);
-        break;
-      case CONTENT_TYPES.REGIONAL:
-        setSelectedRegionalGenre(genre);
-        break;
-    }
-  };
+  }, [contentType, selectedRegion]);
 
   // Infinite scroll implementation with proper typing
   const lastElementRef = useCallback(node => {
@@ -164,24 +123,22 @@ function MainComponent() {
       
       // Common parameter to exclude adult content
       const excludeAdultContent = "&include_adult=false&certification.lte=PG-13";
-      const currentGenre = getCurrentGenre();
-      const genreParam = currentGenre.id !== 0 ? `&with_genres=${currentGenre.id}` : "";
       
       switch(contentType) {
         case CONTENT_TYPES.ANIME:
-          endpoint = `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP${genreParam !== "&with_genres=16" ? genreParam : ""}&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=${nextPage}`;
           setter = setPopularAnime;
           break;
         case CONTENT_TYPES.MOVIE:
-          endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}${genreParam}${excludeAdultContent}&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/movie/popular?api_key=${TMDB_API_KEY}${excludeAdultContent}&page=${nextPage}`;
           setter = setPopularMovies;
           break;
         case CONTENT_TYPES.TV:
-          endpoint = `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&without_genres=16${genreParam}${excludeAdultContent}&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}&without_genres=16${excludeAdultContent}&page=${nextPage}`;
           setter = setPopularTV;
           break;
         case CONTENT_TYPES.REGIONAL:
-          endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}${genreParam}&sort_by=popularity.desc${excludeAdultContent}&page=${nextPage}`;
+          endpoint = `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc${excludeAdultContent}&page=${nextPage}`;
           setter = setHindiContent;
           break;
       }
@@ -224,18 +181,16 @@ function MainComponent() {
       
       // Common parameters to exclude adult content across all requests
       const excludeAdultContent = "&include_adult=false&certification.lte=PG-13";
-      const currentGenre = getCurrentGenre();
-      const genreParam = currentGenre.id !== 0 ? `&with_genres=${currentGenre.id}` : "";
       
       if (contentType === CONTENT_TYPES.ANIME) {
         // For anime trending, we'll use a discover endpoint with better filters since airing_today doesn't work well
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP${genreParam !== "&with_genres=16" ? genreParam : ""}&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
         
         // Get popular anime - ensure it's from Japan with animation genre
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP${genreParam !== "&with_genres=16" ? genreParam : ""}&sort_by=popularity.desc${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc${excludeAdultContent}&page=1`
         );
         
         // Get new arrivals - anime from Japan with most recent first, limit to last 2 years for freshness
@@ -244,7 +199,7 @@ function MainComponent() {
         const twoYearsAgoStr = twoYearsAgo.toISOString().split('T')[0];
         
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP${genreParam !== "&with_genres=16" ? genreParam : ""}&sort_by=first_air_date.desc&first_air_date.gte=${twoYearsAgoStr}&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&with_genres=16&with_origin_country=JP&sort_by=first_air_date.desc&first_air_date.gte=${twoYearsAgoStr}&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -281,12 +236,12 @@ function MainComponent() {
         
         // Get popular movies (overall popularity)
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}${genreParam}&sort_by=popularity.desc${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/movie/popular?api_key=${TMDB_API_KEY}${excludeAdultContent}`
         );
         
         // Get new arrivals (newest first)
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}${genreParam}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -297,15 +252,7 @@ function MainComponent() {
         const popularData = await popularResponse.json();
         const newArrivalsData = await newArrivalsResponse.json();
 
-        // Filter trending movies by selected genre if not "All"
-        let filteredTrending = trendingData.results;
-        if (currentGenre.id !== 0) {
-          filteredTrending = filteredTrending.filter(movie => 
-            movie.genre_ids && movie.genre_ids.includes(currentGenre.id)
-          );
-        }
-
-        setTrendingMovies(formatContentData(filteredTrending, "movie"));
+        setTrendingMovies(formatContentData(trendingData.results, "movie"));
         setPopularMovies(formatContentData(popularData.results, "movie"));
         setNewArrivalsMovies(formatContentData(newArrivalsData.results, "movie"));
         
@@ -318,12 +265,12 @@ function MainComponent() {
         
         // Get popular TV - exclude animation genre to avoid anime
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&without_genres=16${genreParam}&sort_by=popularity.desc${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/tv/popular?api_key=${TMDB_API_KEY}${excludeAdultContent}`
         );
         
         // Get new arrivals - exclude animation genre
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&without_genres=16${genreParam}&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/discover/tv?api_key=${TMDB_API_KEY}&sort_by=first_air_date.desc&first_air_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -340,15 +287,7 @@ function MainComponent() {
             show.origin_country && show.origin_country.includes("JP"))
         );
 
-        // Filter trending TV by selected genre if not "All"
-        let filteredTrending = filterNonAnime(trendingData.results);
-        if (currentGenre.id !== 0) {
-          filteredTrending = filteredTrending.filter(show => 
-            show.genre_ids && show.genre_ids.includes(currentGenre.id)
-          );
-        }
-
-        setTrendingTV(formatContentData(filteredTrending, "tv"));
+        setTrendingTV(formatContentData(filterNonAnime(trendingData.results), "tv"));
         setPopularTV(formatContentData(filterNonAnime(popularData.results), "tv"));
         setNewArrivalsTV(formatContentData(filterNonAnime(newArrivalsData.results), "tv"));
         
@@ -356,17 +295,17 @@ function MainComponent() {
       } else if (contentType === CONTENT_TYPES.REGIONAL) {
         // Get trending regional content (last 7 days)
         const trendingResponse = await fetch(
-          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}${genreParam}&sort_by=popularity.desc${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc${excludeAdultContent}&page=1`
         );
         
         // Get popular regional content (overall popularity)
         const popularResponse = await fetch(
-          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}${genreParam}&sort_by=popularity.desc${excludeAdultContent}&page=2`
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=popularity.desc${excludeAdultContent}&page=2`
         );
         
         // Get new arrivals (newest first)
         const newArrivalsResponse = await fetch(
-          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}${genreParam}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
+          `${TMDB_API_BASE}/discover/movie?api_key=${TMDB_API_KEY}&with_original_language=${selectedRegion.language}&region=${selectedRegion.code}&sort_by=primary_release_date.desc&primary_release_date.lte=${new Date().toISOString().split('T')[0]}${excludeAdultContent}&page=1`
         );
 
         if (!trendingResponse.ok || !popularResponse.ok || !newArrivalsResponse.ok) {
@@ -416,8 +355,7 @@ function MainComponent() {
       status: item.status || "Unknown",
       media_type: mediaType,
       imdb_id: item.imdb_id || null,
-      popularity: item.popularity || 0,
-      genre_ids: item.genre_ids || []
+      popularity: item.popularity || 0
     }));
   };
 
@@ -752,24 +690,7 @@ function MainComponent() {
     }
   };
 
-  // Get current genre filters based on content type
-  const getCurrentGenres = () => {
-    switch(contentType) {
-      case CONTENT_TYPES.ANIME:
-        return ANIME_GENRES;
-      case CONTENT_TYPES.MOVIE:
-        return MOVIE_GENRES;
-      case CONTENT_TYPES.TV:
-        return TV_GENRES;
-      case CONTENT_TYPES.REGIONAL:
-        return REGIONAL_GENRES;
-      default:
-        return [];
-    }
-  };
-
   const currentContent = getCurrentContent();
-  const currentGenres = getCurrentGenres();
 
   return (
     <div className="min-h-screen bg-[#0F0F0F] text-white overflow-x-hidden">
@@ -1090,18 +1011,6 @@ function MainComponent() {
                     Website
                   </a>
                 </div>
-              </div>
-            </div>
-
-            {/* Genre filter row */}
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-semibold">Filter by Genre:</h2>
-                <GenreSelector 
-                  genres={currentGenres}
-                  selectedGenre={getCurrentGenre()}
-                  onGenreChange={handleGenreChange}
-                />
               </div>
             </div>
 
