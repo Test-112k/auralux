@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 
-interface GenreType {
+export interface GenreType {
   id: number;
   name: string;
 }

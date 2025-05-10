@@ -1,3 +1,4 @@
+
 export const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 export const TMDB_API_BASE = "https://api.themoviedb.org/3";
 
@@ -40,6 +41,12 @@ export const REGIONS = [
 
 // Items per page
 export const ITEMS_PER_PAGE = 20;
+
+// Genre type definition
+export interface GenreType {
+  id: number;
+  name: string;
+}
 
 // Genre categories
 export const ANIME_GENRES = [
