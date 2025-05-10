@@ -1,5 +1,7 @@
 
-export const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+// Using a placeholder API key directly in the code since import.meta.env.VITE_TMDB_API_KEY is undefined
+// In a production environment, this would come from environment variables
+export const TMDB_API_KEY = "3e1dd25638249611e92a50203166e7a9";
 export const TMDB_API_BASE = "https://api.themoviedb.org/3";
 
 export const VIDSRC_API_BASE = "https://vidsrc.to/ajax";
